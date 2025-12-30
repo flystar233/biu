@@ -168,6 +168,13 @@ const Favorites: React.FC = () => {
         setHeaderCollapsed(shouldCollapse);
       }
 
+      // 如果滚动到底部，强制收起顶部区域
+      const isAtBottom = scrollHeight - scrollTop - clientHeight <= 10; // 10px 容差
+      if (isAtBottom && !headerCollapsedRef.current) {
+        headerCollapsedRef.current = true;
+        setHeaderCollapsed(true);
+      }
+
       // 距离底部 200px 时加载更多
       if (scrollHeight - scrollTop - clientHeight < 200) {
         if (hasMore && !loading) {

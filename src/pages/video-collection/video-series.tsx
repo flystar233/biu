@@ -115,13 +115,20 @@ const VideoSeries = () => {
     if (!rootEl) return;
 
     const handleScroll = () => {
-      const { scrollTop } = rootEl;
+      const { scrollTop, scrollHeight, clientHeight } = rootEl;
 
       // 滚动超过 50px 时收起顶部区域，只在状态变化时更新
       const shouldCollapse = scrollTop > 50;
       if (shouldCollapse !== headerCollapsedRef.current) {
         headerCollapsedRef.current = shouldCollapse;
         setHeaderCollapsed(shouldCollapse);
+      }
+
+      // 如果滚动到底部，强制收起顶部区域
+      const isAtBottom = scrollHeight - scrollTop - clientHeight <= 10; // 10px 容差
+      if (isAtBottom && !headerCollapsedRef.current) {
+        headerCollapsedRef.current = true;
+        setHeaderCollapsed(true);
       }
     };
 
