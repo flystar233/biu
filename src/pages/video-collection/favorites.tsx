@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router";
 
 import { addToast, Link, Pagination } from "@heroui/react";
@@ -8,7 +8,9 @@ import { CollectionType } from "@/common/constants/collection";
 import { formatDuration } from "@/common/utils";
 import GridList from "@/components/grid-list";
 import MediaItem from "@/components/media-item";
+import { type ScrollRefObject } from "@/components/scroll-container";
 import SearchFilter from "@/components/search-filter";
+import { VirtualList } from "@/components/virtual-list";
 import { getFavResourceList, type FavMedia, type FavResourceListRequestParams } from "@/service/fav-resource";
 import { usePlayList } from "@/store/play-list";
 import { useSettings } from "@/store/settings";
@@ -39,6 +41,10 @@ const Favorites: React.FC = () => {
     order: "mtime",
     type: 0,
   });
+
+  // 使用 ref 存储 searchParams，避免 fetchListPage 重建导致的连锁重渲染
+  const searchParamsRef = useRef(searchParams);
+  searchParamsRef.current = searchParams;
 
   // 分页模式（卡片模式）
   const {
@@ -89,7 +95,11 @@ const Favorites: React.FC = () => {
   const [listModeLoading, setListModeLoading] = useState(false);
   const [listModePage, setListModePage] = useState(1);
   const [listModeHasMore, setListModeHasMore] = useState(true);
-  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  const virtualScrollerRef = useRef<ScrollRefObject>(null);
+
+  // 顶部区域收起状态
+  const [headerCollapsed, setHeaderCollapsed] = useState(false);
+  const headerCollapsedRef = useRef(false);
 
   const fetchListPage = useCallback(
     async (page: number, { reset = false } = {}) => {
@@ -102,7 +112,7 @@ const Favorites: React.FC = () => {
           ps: 20,
           pn: page,
           platform: "web",
-          ...searchParams,
+          ...searchParamsRef.current,
         });
 
         if (res.code === 0 && res.data) {
@@ -130,44 +140,86 @@ const Favorites: React.FC = () => {
         setListModeLoading(false);
       }
     },
-    [favFolderId, searchParams],
+    [favFolderId],
   );
 
-  // 监听列表底部元素实现下拉加载
+  // 使用 ref 存储函数和状态，避免依赖变化导致的连锁重渲染
+  const fetchListPageRef = useRef(fetchListPage);
+  fetchListPageRef.current = fetchListPage;
+
+  const listModeStateRef = useRef({ hasMore: listModeHasMore, loading: listModeLoading, page: listModePage });
+  listModeStateRef.current = { hasMore: listModeHasMore, loading: listModeLoading, page: listModePage };
+
+  // 监听虚拟列表滚动实现下拉加载 + 顶部区域收起
   useEffect(() => {
     if (displayMode !== "list") return;
 
-    const observer = new IntersectionObserver(
-      entries => {
-        const first = entries[0];
-        if (first.isIntersecting && listModeHasMore && !listModeLoading) {
-          fetchListPage(listModePage + 1);
+    const rootEl = virtualScrollerRef.current?.osInstance()?.elements().viewport as HTMLElement | undefined;
+    if (!rootEl) return;
+
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = rootEl;
+      const { hasMore, loading, page } = listModeStateRef.current;
+
+      // 滚动超过 50px 时收起顶部区域，只在状态变化时更新
+      const shouldCollapse = scrollTop > 50;
+      if (shouldCollapse !== headerCollapsedRef.current) {
+        headerCollapsedRef.current = shouldCollapse;
+        setHeaderCollapsed(shouldCollapse);
+      }
+
+      // 距离底部 200px 时加载更多
+      if (scrollHeight - scrollTop - clientHeight < 200) {
+        if (hasMore && !loading) {
+          fetchListPageRef.current(page + 1);
         }
-      },
-      { root: null, rootMargin: "200px", threshold: 0 },
-    );
+      }
+    };
 
-    const target = loadMoreRef.current;
-    if (target) observer.observe(target);
-
-    return () => observer.disconnect();
-  }, [displayMode, fetchListPage, listModeHasMore, listModeLoading, listModePage]);
+    rootEl.addEventListener("scroll", handleScroll);
+    return () => {
+      rootEl.removeEventListener("scroll", handleScroll);
+    };
+  }, [displayMode, listModeData.list.length]);
 
   // 根据当前模式获取显示数据
   const currentData = displayMode === "list" ? listModeData : data;
-  const currentLoading = displayMode === "list" ? listModeLoading : loading;
+  // 列表模式下用 info 是否存在判断初始加载状态
+  const currentLoading = displayMode === "list" ? listModeData.info === null : loading;
+
+  // 缓存 Info 组件需要的数据，避免列表加载更多时触发 Info 重新渲染
+  const infoData = useMemo(
+    () => ({
+      cover: currentData?.info?.cover,
+      attr: currentData?.info?.attr,
+      title: currentData?.info?.title,
+      desc: currentData?.info?.intro,
+      upMid: currentData?.info?.upper?.mid,
+      upName: currentData?.info?.upper?.name,
+      mediaCount: currentData?.info?.media_count,
+    }),
+    [
+      currentData?.info?.cover,
+      currentData?.info?.attr,
+      currentData?.info?.title,
+      currentData?.info?.intro,
+      currentData?.info?.upper?.mid,
+      currentData?.info?.upper?.name,
+      currentData?.info?.media_count,
+    ],
+  );
 
   // 刷新当前模式的数据
   const handleRefresh = useCallback(() => {
     if (displayMode === "list") {
       setListModeHasMore(true);
-      fetchListPage(1, { reset: true });
+      fetchListPageRef.current(1, { reset: true });
     } else {
       refreshAsync?.();
     }
-  }, [displayMode, fetchListPage, refreshAsync]);
+  }, [displayMode, refreshAsync]);
 
-  // 当收藏夹ID变化时，重置搜索参数
+  // 当收藏夹ID变化时，重置搜索参数和收起状态
   useEffect(() => {
     if (favFolderId) {
       setSearchParams({
@@ -176,6 +228,8 @@ const Favorites: React.FC = () => {
         order: "mtime",
         type: 0,
       });
+      setHeaderCollapsed(false);
+      headerCollapsedRef.current = false;
     }
   }, [favFolderId]);
 
@@ -185,18 +239,22 @@ const Favorites: React.FC = () => {
       setListModeData({ info: null, list: [] });
       setListModePage(1);
       setListModeHasMore(true);
-      fetchListPage(1, { reset: true });
+      fetchListPageRef.current(1, { reset: true });
     }
     // 卡片模式下，usePagination会自动处理searchParams变化
-  }, [displayMode, favFolderId, fetchListPage, searchParams]);
+  }, [displayMode, favFolderId, searchParams]);
 
-  const onPlayAll = async () => {
+  // 使用 ref 存储 currentData，避免 useCallback 依赖变化
+  const currentDataRef = useRef(currentData);
+  currentDataRef.current = currentData;
+
+  const onPlayAll = useCallback(async () => {
     if (!favFolderId) {
       addToast({ title: "收藏夹 ID 无效", color: "danger" });
       return;
     }
 
-    const totalCount = currentData?.info?.media_count ?? 0;
+    const totalCount = currentDataRef.current?.info?.media_count ?? 0;
     if (!totalCount) {
       addToast({ title: "收藏夹为空", color: "warning" });
       return;
@@ -216,14 +274,15 @@ const Favorites: React.FC = () => {
     } catch {
       addToast({ title: "获取收藏夹全部歌曲失败", color: "danger" });
     }
-  };
-  const addAllMedia = async () => {
+  }, [favFolderId, playList]);
+
+  const addAllMedia = useCallback(async () => {
     if (!favFolderId) {
       addToast({ title: "收藏夹 ID 无效", color: "danger" });
       return;
     }
 
-    const totalCount = currentData?.info?.media_count ?? 0;
+    const totalCount = currentDataRef.current?.info?.media_count ?? 0;
     if (!totalCount) {
       addToast({ title: "收藏夹为空", color: "warning" });
       return;
@@ -243,7 +302,7 @@ const Favorites: React.FC = () => {
     } catch {
       addToast({ title: "获取收藏夹全部歌曲失败", color: "danger" });
     }
-  };
+  }, [favFolderId, addToPlayList]);
   const renderMediaItem = useCallback(
     (item: FavMedia) => (
       <MediaItem
@@ -298,24 +357,91 @@ const Favorites: React.FC = () => {
     [displayMode, handleRefresh, isCollected, isOwn, play],
   );
 
+  // 列表模式使用 flex 布局让 VirtualList 占满剩余高度
+  if (displayMode === "list") {
+    return (
+      <div className="flex h-full flex-col">
+        <div className="flex-none transition-all duration-300">
+          <Info
+            loading={currentLoading}
+            type={CollectionType.Favorite}
+            cover={infoData.cover}
+            attr={infoData.attr}
+            title={infoData.title}
+            desc={infoData.desc}
+            upMid={infoData.upMid}
+            upName={infoData.upName}
+            mediaCount={infoData.mediaCount}
+            collapsed={headerCollapsed}
+            afterChangeInfo={handleRefresh}
+            onPlayAll={onPlayAll}
+            onAddToPlayList={addAllMedia}
+          />
+
+          {/* 收起时隐藏搜索过滤器 */}
+          <div
+            className={`overflow-hidden transition-all duration-300 ${
+              headerCollapsed ? "max-h-0 opacity-0" : "max-h-20 opacity-100"
+            }`}
+          >
+            <SearchFilter
+              keyword={searchParams.keyword}
+              order={searchParams.order}
+              placeholder="请输入关键词"
+              searchIcon="search2"
+              orderOptions={[
+                { value: "mtime", label: "收藏时间" },
+                { value: "view", label: "播放量" },
+                { value: "pubtime", label: "投稿时间" },
+              ]}
+              onKeywordChange={keyword => setSearchParams(prev => ({ ...prev, keyword }))}
+              onOrderChange={order => setSearchParams(prev => ({ ...prev, order }))}
+              containerClassName="mb-4 flex flex-wrap items-center gap-4"
+            />
+          </div>
+        </div>
+
+        {/* 虚拟列表 */}
+        {listModeData?.list?.length > 0 && (
+          <div className="min-h-0 flex-1">
+            <VirtualList
+              scrollerRef={virtualScrollerRef}
+              className="h-full"
+              data={listModeData.list}
+              itemHeight={64}
+              overscan={8}
+              renderItem={renderMediaItem}
+            />
+          </div>
+        )}
+
+        {/* 加载状态 */}
+        {listModeLoading && <div className="text-foreground-500 flex-none py-2 text-center text-sm">加载中...</div>}
+        {!listModeHasMore && !listModeLoading && listModeData?.list?.length > 0 && (
+          <div className="text-foreground-500 flex-none py-2 text-center text-sm">没有更多了</div>
+        )}
+      </div>
+    );
+  }
+
+  // 卡片模式
   return (
     <>
       <Info
         loading={currentLoading}
         type={CollectionType.Favorite}
-        cover={currentData?.info?.cover}
-        attr={currentData?.info?.attr}
-        title={currentData?.info?.title}
-        desc={currentData?.info?.intro}
-        upMid={currentData?.info?.upper?.mid}
-        upName={currentData?.info?.upper?.name}
-        mediaCount={currentData?.info?.media_count}
+        cover={infoData.cover}
+        attr={infoData.attr}
+        title={infoData.title}
+        desc={infoData.desc}
+        upMid={infoData.upMid}
+        upName={infoData.upName}
+        mediaCount={infoData.mediaCount}
         afterChangeInfo={handleRefresh}
         onPlayAll={onPlayAll}
         onAddToPlayList={addAllMedia}
       />
 
-      {/* 搜索和过滤区域 */}
       <SearchFilter
         keyword={searchParams.keyword}
         order={searchParams.order}
@@ -331,28 +457,15 @@ const Favorites: React.FC = () => {
         containerClassName="mb-4 flex flex-wrap items-center gap-4"
       />
 
-      {displayMode === "card" ? (
-        <>
-          <GridList data={data?.list ?? []} loading={loading} itemKey="id" renderItem={renderMediaItem} />
-          {pagination.totalPage > 1 && (
-            <div className="flex w-full items-center justify-center py-6">
-              <Pagination
-                initialPage={1}
-                total={pagination.totalPage}
-                page={pagination.current}
-                onChange={next => getPageData({ current: next, pageSize: 20 })}
-              />
-            </div>
-          )}
-        </>
-      ) : (
-        <div>
-          {(listModeData?.list ?? []).map(renderMediaItem)}
-          <div ref={loadMoreRef} className="h-2" />
-          {listModeLoading && <div className="text-foreground-500 py-2 text-center text-sm">加载中...</div>}
-          {!listModeHasMore && !listModeLoading && (
-            <div className="text-foreground-500 py-2 text-center text-sm">没有更多了</div>
-          )}
+      <GridList data={data?.list ?? []} loading={loading} itemKey="id" renderItem={renderMediaItem} />
+      {pagination.totalPage > 1 && (
+        <div className="flex w-full items-center justify-center py-6">
+          <Pagination
+            initialPage={1}
+            total={pagination.totalPage}
+            page={pagination.current}
+            onChange={next => getPageData({ current: next, pageSize: 20 })}
+          />
         </div>
       )}
     </>

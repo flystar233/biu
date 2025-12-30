@@ -1,13 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { addToast, Button, Link } from "@heroui/react";
 import { RiRefreshLine } from "@remixicon/react";
 import moment from "moment";
 
 import { formatDuration } from "@/common/utils";
+import Empty from "@/components/empty";
 import GridList from "@/components/grid-list";
 import MediaItem from "@/components/media-item";
-import ScrollContainer from "@/components/scroll-container";
+import ScrollContainer, { type ScrollRefObject } from "@/components/scroll-container";
+import { VirtualList } from "@/components/virtual-list";
 import {
   getWebInterfaceHistoryCursor,
   type HistoryBusinessType,
@@ -17,6 +19,7 @@ import { usePlayList } from "@/store/play-list";
 import { useSettings } from "@/store/settings";
 
 const HISTORY_PAGE_SIZE = 30;
+const LIST_ITEM_HEIGHT = 64;
 
 const History = () => {
   const [initialLoading, setInitialLoading] = useState(true);
@@ -28,6 +31,8 @@ const History = () => {
   const [hasMore, setHasMore] = useState(true);
   const play = usePlayList(s => s.play);
   const displayMode = useSettings(state => state.displayMode);
+  const scrollerRef = useRef<ScrollRefObject>(null);
+  const virtualScrollerRef = useRef<ScrollRefObject>(null);
 
   const fetchHistory = async (isLoadMore = false, resetCursor = false) => {
     try {
@@ -100,6 +105,29 @@ const History = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // 列表模式下的无限滚动
+  useEffect(() => {
+    if (displayMode !== "list") return;
+
+    const rootEl = virtualScrollerRef.current?.osInstance()?.elements().viewport as HTMLElement | undefined;
+    if (!rootEl) return;
+
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = rootEl;
+      // 距离底部 200px 时加载更多
+      if (scrollHeight - scrollTop - clientHeight < 200) {
+        if (hasMore && !loadingMore && !initialLoading) {
+          handleLoadMore();
+        }
+      }
+    };
+
+    rootEl.addEventListener("scroll", handleScroll);
+    return () => {
+      rootEl.removeEventListener("scroll", handleScroll);
+    };
+  }, [displayMode, hasMore, loadingMore, initialLoading]);
+
   const handlePlay = (item: HistoryListItem) => {
     if (item.history.bvid) {
       play({
@@ -169,27 +197,52 @@ const History = () => {
     return <MediaItem {...commonProps} />;
   };
 
-  return (
-    <>
-      <ScrollContainer className="h-full w-full p-4">
-        <div className="mb-4 flex items-center justify-between">
+  // 列表模式使用虚拟列表
+  if (displayMode === "list") {
+    return (
+      <div className="flex h-full w-full flex-col">
+        <div className="flex flex-none items-center justify-between p-4 pb-0">
           <h1>历史记录</h1>
           <Button isIconOnly variant="light" size="sm" onPress={handleRefresh}>
             <RiRefreshLine size={18} />
           </Button>
         </div>
-        {displayMode === "card" ? (
-          <GridList
-            loading={initialLoading}
-            data={list}
-            itemKey={item => `${item.history.oid}-${item.view_at}`}
-            renderItem={renderMediaItem}
-          />
-        ) : (
-          <div className="space-y-2">{list.map(renderMediaItem)}</div>
+
+        {/* 初始加载骨架屏 */}
+        {initialLoading && (
+          <div className="space-y-4 p-4">
+            {Array.from({ length: 10 }).map((_, idx) => (
+              <div key={idx} className="flex space-x-4">
+                <div className="h-12 w-12 animate-pulse rounded bg-gray-200"></div>
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 w-3/4 animate-pulse rounded bg-gray-200"></div>
+                  <div className="h-4 w-1/2 animate-pulse rounded bg-gray-200"></div>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
-        {hasMore && (
-          <div className="flex w-full items-center justify-center py-6">
+
+        {/* 空数据 */}
+        {!initialLoading && list.length === 0 && <Empty className="min-h-[40vh]" />}
+
+        {/* 虚拟列表 */}
+        {!initialLoading && list.length > 0 && (
+          <div className="min-h-0 flex-1">
+            <VirtualList
+              scrollerRef={virtualScrollerRef}
+              className="h-full px-4"
+              data={list}
+              itemHeight={LIST_ITEM_HEIGHT}
+              overscan={8}
+              renderItem={renderMediaItem}
+            />
+          </div>
+        )}
+
+        {/* 加载更多按钮 */}
+        {hasMore && !initialLoading && (
+          <div className="flex w-full flex-none items-center justify-center py-6">
             <Button
               variant="flat"
               color="primary"
@@ -201,8 +254,39 @@ const History = () => {
             </Button>
           </div>
         )}
-      </ScrollContainer>
-    </>
+      </div>
+    );
+  }
+
+  // 卡片模式
+  return (
+    <ScrollContainer ref={scrollerRef} className="h-full w-full p-4">
+      <div className="mb-4 flex items-center justify-between">
+        <h1>历史记录</h1>
+        <Button isIconOnly variant="light" size="sm" onPress={handleRefresh}>
+          <RiRefreshLine size={18} />
+        </Button>
+      </div>
+      <GridList
+        loading={initialLoading}
+        data={list}
+        itemKey={item => `${item.history.oid}-${item.view_at}`}
+        renderItem={renderMediaItem}
+      />
+      {hasMore && (
+        <div className="flex w-full items-center justify-center py-6">
+          <Button
+            variant="flat"
+            color="primary"
+            isLoading={loadingMore}
+            onPress={handleLoadMore}
+            disabled={loadingMore}
+          >
+            {loadingMore ? "加载中..." : "加载更多"}
+          </Button>
+        </div>
+      )}
+    </ScrollContainer>
   );
 };
 

@@ -149,7 +149,7 @@ const FavoritesSelectModal = () => {
                       key={item.id}
                       onClick={() => toggle(item.id)}
                       onKeyDown={() => toggle(item.id)}
-                      className="hover:bg-default-100 dark:hover:bg-default-200 flex cursor-pointer items-center gap-3 rounded px-2 py-2"
+                      className="hover:bg-default/40 flex cursor-pointer items-center gap-3 rounded px-2 py-2"
                     >
                       <Checkbox
                         color="primary"

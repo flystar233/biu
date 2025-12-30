@@ -4,6 +4,7 @@ import { useNavigate } from "react-router";
 import { Image, Card, CardHeader, CardBody, addToast, User } from "@heroui/react";
 import moment from "moment";
 
+import { formatBiliImageUrl } from "@/common/utils/url";
 import { usePlayList } from "@/store/play-list";
 
 import type { WebDynamicItem } from "../../service/web-dynamic";
@@ -15,7 +16,7 @@ interface DynamicItemProps {
   onClose: () => void;
 }
 
-const DynamicItem: React.FC<DynamicItemProps> = ({ item, onClose }) => {
+const DynamicItem: React.FC<DynamicItemProps> = React.memo(({ item, onClose }) => {
   const author = item.modules.module_author;
   const dynamic = item.modules.module_dynamic;
   const archive = dynamic.major?.archive;
@@ -48,7 +49,8 @@ const DynamicItem: React.FC<DynamicItemProps> = ({ item, onClose }) => {
         <User
           isFocusable
           avatarProps={{
-            src: author.face,
+            src: formatBiliImageUrl(author.face, 96),
+            imgProps: { loading: "lazy" },
           }}
           description={
             <div className="text-tiny text-default-500 flex items-center gap-1">
@@ -114,7 +116,8 @@ const DynamicItem: React.FC<DynamicItemProps> = ({ item, onClose }) => {
               <Image
                 removeWrapper
                 radius="none"
-                src={archive?.cover || ""}
+                loading="lazy"
+                src={formatBiliImageUrl(archive?.cover, 400)}
                 alt={archive?.title || ""}
                 className="h-full w-full object-cover"
                 classNames={{
@@ -140,6 +143,8 @@ const DynamicItem: React.FC<DynamicItemProps> = ({ item, onClose }) => {
       </CardBody>
     </Card>
   );
-};
+});
+
+DynamicItem.displayName = "DynamicItem";
 
 export default DynamicItem;

@@ -10,7 +10,6 @@ import { VirtualList } from "@/components/virtual-list";
 import { usePlayList } from "@/store/play-list";
 
 import ListItem from "./list-item";
-import Settings from "./settings";
 
 interface Props {
   isOpen: boolean;
@@ -27,9 +26,9 @@ const PlayListDrawer = ({ isOpen, onOpenChange }: Props) => {
   const pureList = useMemo(() => {
     return uniqBy(list, item => item.bvid);
   }, [list]);
-  const currentMedia = useMemo(() => pureList.find(item => item.bvid === playItem?.bvid), [pureList, playItem]);
-  const filteredList = useMemo(() => {
-    return pureList.filter(item => item.bvid !== playItem?.bvid);
+  const currentIndex = useMemo(() => {
+    if (!playItem) return undefined;
+    return pureList.findIndex(item => item.bvid === playItem.bvid);
   }, [pureList, playItem]);
 
   return (
@@ -48,36 +47,37 @@ const PlayListDrawer = ({ isOpen, onOpenChange }: Props) => {
       <DrawerContent className="rounded-xl">
         <DrawerHeader className="border-b-content2 flex flex-row items-center justify-between space-x-2 border-b px-4 py-3">
           <h3>播放列表</h3>
-          <div className="inline-flex items-center">
-            <Settings />
-            <If condition={Boolean(pureList?.length)}>
-              <Tooltip closeDelay={0} content="清空播放列表">
-                <Button isIconOnly size="sm" variant="light" onPress={clear}>
-                  <RiDeleteBinLine size={16} />
-                </Button>
-              </Tooltip>
-            </If>
-          </div>
+          <If condition={Boolean(pureList?.length)}>
+            <Tooltip closeDelay={0} content="清空播放列表">
+              <Button isIconOnly size="sm" variant="light" onPress={clear}>
+                <RiDeleteBinLine size={16} />
+              </Button>
+            </Tooltip>
+          </If>
         </DrawerHeader>
-        {Boolean(currentMedia) && (
-          <div className="border-b-content2 border-b px-2 py-1">
-            <ListItem isPlaying data={currentMedia!} onClose={() => onOpenChange(false)} />
-          </div>
-        )}
         <DrawerBody className="overflow-hidden px-0">
           <VirtualList
             className="px-2"
-            data={filteredList}
+            data={pureList}
             itemHeight={64}
             overscan={8}
+            initialScrollIndex={currentIndex}
             empty={
               <div className="flex flex-col items-center justify-center px-4">
                 <Empty className="min-h-[180px]" />
               </div>
             }
-            renderItem={item => (
-              <ListItem data={item} onClose={() => onOpenChange(false)} onPress={() => playListItem(item.id)} />
-            )}
+            renderItem={item => {
+              const isPlaying = item.bvid === playItem?.bvid;
+              return (
+                <ListItem
+                  isPlaying={isPlaying}
+                  data={item}
+                  onClose={() => onOpenChange(false)}
+                  onPress={isPlaying ? undefined : () => playListItem(item.id)}
+                />
+              );
+            }}
           />
         </DrawerBody>
       </DrawerContent>

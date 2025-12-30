@@ -2,7 +2,7 @@ import { Card, CardBody, CardFooter, Image } from "@heroui/react";
 import { twMerge } from "tailwind-merge";
 
 import FallbackImage from "@/assets/images/fallback.png";
-import { formatUrlProtocal } from "@/common/utils/url";
+import { formatBiliImageUrl } from "@/common/utils/url";
 
 import Skeleton from "./skeleton";
 
@@ -33,9 +33,10 @@ const ImageCard = ({
         <Image
           radius="md"
           removeWrapper
+          loading="lazy"
           className="object-cover"
           height={imageHeight}
-          src={formatUrlProtocal(imageUrl)}
+          src={formatBiliImageUrl(imageUrl)}
           fallbackSrc={FallbackImage}
           width="100%"
         />

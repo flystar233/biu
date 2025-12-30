@@ -1,3 +1,5 @@
+import React from "react";
+
 import { Image, Link, Skeleton, User } from "@heroui/react";
 import { RiPlayFill } from "@remixicon/react";
 import { useRequest } from "ahooks";
@@ -23,6 +25,8 @@ interface Props {
   upMid?: number;
   upName?: string;
   mediaCount?: number;
+  /** 是否收起状态（滚动时触发） */
+  collapsed?: boolean;
   afterChangeInfo: VoidFunction;
   onPlayAll: VoidFunction;
   onAddToPlayList: VoidFunction;
@@ -38,13 +42,15 @@ const Info = ({
   upMid,
   upName,
   mediaCount,
+  collapsed = false,
   afterChangeInfo,
   onPlayAll,
   onAddToPlayList,
 }: Props) => {
-  const user = useUser(s => s.user);
+  // 只选择需要的字段，避免 user 对象变化导致重渲染
+  const userMid = useUser(s => s.user?.mid);
 
-  const isOwn = upMid === user?.mid;
+  const isOwn = upMid === userMid;
 
   const { data: upInfo } = useRequest(
     async () => {
@@ -55,7 +61,7 @@ const Info = ({
       return res?.data;
     },
     {
-      ready: Boolean(upMid) && upMid !== user?.mid,
+      ready: Boolean(upMid) && upMid !== userMid,
       refreshDeps: [upMid],
     },
   );
@@ -73,52 +79,144 @@ const Info = ({
   }
 
   return (
-    <div className="mb-6 flex space-x-4">
-      <Image
-        isBlurred
-        radius="md"
-        src={cover || FallbackImage}
-        fallbackSrc={FallbackImage}
-        alt={title}
-        width={230}
-        height={230}
-        className={clx("object-cover", {
-          "border-content3 border": !cover,
-        })}
-        classNames={{
-          wrapper: "flex-none",
+    <div
+      className={clx("flex items-start space-x-4 transition-all duration-300 ease-out", {
+        "mb-6": !collapsed,
+        "mb-4": collapsed,
+      })}
+    >
+      {/* 封面图 - 使用 CSS 过渡实现缩放 */}
+      <div
+        className="flex-none overflow-hidden rounded-lg transition-all duration-300 ease-out"
+        style={{
+          width: collapsed ? 64 : 230,
+          height: collapsed ? 64 : 230,
         }}
-      />
-      <div className="flex flex-col justify-between">
-        <div className="flex flex-col items-start space-y-4">
-          <h1 className="text-3xl">{title}</h1>
-          {Boolean(desc) && <Ellipsis className="text-sm text-zinc-500">{desc}</Ellipsis>}
-          {!isOwn && (
-            <User
-              avatarProps={{
-                size: "sm",
-                src: upInfo?.card?.face,
-              }}
-              name={
-                <Link color="foreground" href={`/user/${upMid}`} className="hover:underline">
-                  {upName}
-                </Link>
-              }
-            />
-          )}
-          <div className="flex items-center space-x-2 text-sm text-zinc-400">
-            <span>
-              {type === CollectionType.Favorite
-                ? `${isOwn && Boolean(attr) ? (isPrivateFav(attr as number) ? "私密" : "公开") : ""}收藏夹`
-                : "视频合集"}
+      >
+        <Image
+          key={cover}
+          isBlurred
+          radius="md"
+          src={cover || FallbackImage}
+          fallbackSrc={FallbackImage}
+          alt={title}
+          width="100%"
+          height="100%"
+          className={clx("h-full w-full object-cover transition-all duration-300", {
+            "border-content3 border": !cover,
+          })}
+          classNames={{
+            wrapper: "w-full h-full",
+            img: "w-full h-full",
+          }}
+        />
+      </div>
+
+      {/* 右侧内容区 */}
+      <div className="flex min-w-0 flex-1 flex-col transition-all duration-300">
+        {/* 收起时：标题和按钮在同一行 */}
+        <div
+          className={clx("flex items-center justify-between transition-all duration-300", {
+            "flex-col items-start": !collapsed,
+            "flex-row": collapsed,
+          })}
+        >
+          {/* 左侧：标题和视频数量 */}
+          <div className="min-w-0 flex-1">
+            <h1
+              className={clx("transition-all duration-300 ease-out", {
+                "mb-4 text-3xl": !collapsed,
+                "truncate text-xl": collapsed,
+              })}
+            >
+              {title}
+            </h1>
+
+            {/* 视频数量 - 收起时显示在标题下方 */}
+            <span
+              className={clx("text-foreground-500 text-sm transition-all duration-300", {
+                "hidden opacity-0": !collapsed,
+                "block opacity-100": collapsed,
+              })}
+            >
+              {mediaCount} 条视频
             </span>
-            <span>•</span>
-            <span>{mediaCount} 条视频</span>
+          </div>
+
+          {/* 右侧：收起时的按钮 */}
+          <div
+            className={clx("flex flex-none items-center space-x-2 transition-all duration-300", {
+              "h-0 w-0 overflow-hidden opacity-0": !collapsed,
+              "ml-4 opacity-100": collapsed,
+            })}
+          >
+            {(mediaCount ?? 0) > 0 && (
+              <AsyncButton
+                size="sm"
+                color="primary"
+                startContent={<RiPlayFill size={16} className="text-inherit" />}
+                onPress={onPlayAll}
+              >
+                播放全部
+              </AsyncButton>
+            )}
+            <Menu
+              type={type}
+              isOwn={isOwn}
+              mediaCount={mediaCount}
+              afterChangeInfo={afterChangeInfo}
+              onAddToPlayList={onAddToPlayList}
+            />
           </div>
         </div>
-        <div className="flex items-center space-x-2">
+
+        {/* 描述、UP主信息、类型标签 - 展开时显示 */}
+        <div
+          className={clx("overflow-hidden transition-all duration-300 ease-out", {
+            "max-h-40 opacity-100": !collapsed,
+            "max-h-0 opacity-0": collapsed,
+          })}
+        >
+          <div className="flex flex-col items-start space-y-4">
+            {Boolean(desc) && <Ellipsis className="text-sm text-zinc-500">{desc}</Ellipsis>}
+            {!isOwn && (
+              <User
+                avatarProps={{
+                  size: "sm",
+                  src: upInfo?.card?.face,
+                }}
+                name={
+                  <Link color="foreground" href={`/user/${upMid}`} className="hover:underline">
+                    {upName}
+                  </Link>
+                }
+              />
+            )}
+            <div className="flex items-center space-x-2 text-sm text-zinc-400">
+              <span>
+                {type === CollectionType.Favorite
+                  ? `${isOwn && Boolean(attr) ? (isPrivateFav(attr as number) ? "私密" : "公开") : ""}收藏夹`
+                  : "视频合集"}
+              </span>
+              <span>•</span>
+              <span>{mediaCount} 条视频</span>
+            </div>
+          </div>
+        </div>
+
+        {/* 操作按钮区 - 展开时显示在底部 */}
+        <div
+          className={clx("flex items-center space-x-2 transition-all duration-300", {
+            "mt-auto pt-4 opacity-100": !collapsed,
+            "h-0 overflow-hidden opacity-0": collapsed,
+          })}
+        >
           {(mediaCount ?? 0) > 0 && (
-            <AsyncButton color="primary" startContent={<RiPlayFill className="text-inherit" />} onPress={onPlayAll}>
+            <AsyncButton
+              color="primary"
+              startContent={<RiPlayFill size={20} className="text-inherit" />}
+              onPress={onPlayAll}
+            >
               播放全部
             </AsyncButton>
           )}
@@ -135,4 +233,4 @@ const Info = ({
   );
 };
 
-export default Info;
+export default React.memo(Info);

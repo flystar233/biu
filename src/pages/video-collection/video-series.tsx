@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router";
 
 import { Link, Pagination, Skeleton } from "@heroui/react";
@@ -8,7 +8,9 @@ import { CollectionType } from "@/common/constants/collection";
 import { formatDuration } from "@/common/utils";
 import GridList from "@/components/grid-list";
 import MediaItem from "@/components/media-item";
+import { type ScrollRefObject } from "@/components/scroll-container";
 import SearchFilter from "@/components/search-filter";
+import { VirtualList } from "@/components/virtual-list";
 import { getUserVideoArchivesList } from "@/service/user-video-archives-list";
 import { usePlayList } from "@/store/play-list";
 import { useSettings } from "@/store/settings";
@@ -39,6 +41,11 @@ const VideoSeries = () => {
     order: "", // 默认排序（按原顺序显示）
   });
 
+  // 顶部区域收起状态
+  const [headerCollapsed, setHeaderCollapsed] = useState(false);
+  const headerCollapsedRef = useRef(false);
+  const virtualScrollerRef = useRef<ScrollRefObject>(null);
+
   const { data, loading, refreshAsync } = useRequest(
     async () => {
       const res = await getUserVideoArchivesList({
@@ -59,13 +66,15 @@ const VideoSeries = () => {
     setPage(1);
   }, [id, displayMode, searchParams]);
 
-  // 当合集ID变化时，重置搜索参数
+  // 当合集ID变化时，重置搜索参数和收起状态
   useEffect(() => {
     if (id) {
       setSearchParams({
         keyword: "",
         order: "",
       });
+      setHeaderCollapsed(false);
+      headerCollapsedRef.current = false;
     }
   }, [id]);
 
@@ -97,6 +106,30 @@ const VideoSeries = () => {
 
     return result;
   }, [data?.medias, searchParams]);
+
+  // 监听虚拟列表滚动实现顶部区域收起
+  useEffect(() => {
+    if (displayMode !== "list") return;
+
+    const rootEl = virtualScrollerRef.current?.osInstance()?.elements().viewport as HTMLElement | undefined;
+    if (!rootEl) return;
+
+    const handleScroll = () => {
+      const { scrollTop } = rootEl;
+
+      // 滚动超过 50px 时收起顶部区域，只在状态变化时更新
+      const shouldCollapse = scrollTop > 50;
+      if (shouldCollapse !== headerCollapsedRef.current) {
+        headerCollapsedRef.current = shouldCollapse;
+        setHeaderCollapsed(shouldCollapse);
+      }
+    };
+
+    rootEl.addEventListener("scroll", handleScroll);
+    return () => {
+      rootEl.removeEventListener("scroll", handleScroll);
+    };
+  }, [displayMode, filteredMedias.length]);
 
   const total = filteredMedias.length;
   const totalPage = useMemo(() => Math.ceil(total / pageSize), [total, pageSize]);
@@ -136,43 +169,116 @@ const VideoSeries = () => {
     }
   };
 
-  const renderMediaItem = (item: any) => (
-    <MediaItem
-      key={item.bvid}
-      displayMode={displayMode}
-      type="mv"
-      bvid={item.bvid}
-      aid={String(item.id)}
-      title={item.title}
-      playCount={item.cnt_info.play}
-      cover={item.cover}
-      ownerName={item.upper?.name}
-      ownerMid={item.upper?.mid}
-      duration={item.duration as number}
-      footer={
-        displayMode === "card" &&
-        !isCollected && (
-          <div className="text-foreground-500 flex w-full items-center justify-between text-sm">
-            <Link href={`/user/${item.upper?.mid}`} className="text-foreground-500 text-sm hover:underline">
-              {item.upper?.name}
-            </Link>
-            <span>{formatDuration(item.duration as number)}</span>
-          </div>
-        )
-      }
-      onPress={() =>
-        play({
-          type: "mv",
-          bvid: item.bvid,
-          title: item.title,
-          cover: item.cover,
-          ownerName: item.upper?.name,
-          ownerMid: item.upper?.mid,
-        })
-      }
-    />
+  const renderMediaItem = useCallback(
+    (item: any) => (
+      <MediaItem
+        key={item.bvid}
+        displayMode={displayMode}
+        type="mv"
+        bvid={item.bvid}
+        aid={String(item.id)}
+        title={item.title}
+        playCount={item.cnt_info.play}
+        cover={item.cover}
+        ownerName={item.upper?.name}
+        ownerMid={item.upper?.mid}
+        duration={item.duration as number}
+        footer={
+          displayMode === "card" &&
+          !isCollected && (
+            <div className="text-foreground-500 flex w-full items-center justify-between text-sm">
+              <Link href={`/user/${item.upper?.mid}`} className="text-foreground-500 text-sm hover:underline">
+                {item.upper?.name}
+              </Link>
+              <span>{formatDuration(item.duration as number)}</span>
+            </div>
+          )
+        }
+        onPress={() =>
+          play({
+            type: "mv",
+            bvid: item.bvid,
+            title: item.title,
+            cover: item.cover,
+            ownerName: item.upper?.name,
+            ownerMid: item.upper?.mid,
+          })
+        }
+      />
+    ),
+    [displayMode, isCollected, play],
   );
 
+  // 列表模式使用虚拟列表
+  if (displayMode === "list") {
+    return (
+      <div className="flex h-full flex-col">
+        <div className="flex-none transition-all duration-300">
+          <Info
+            loading={loading}
+            type={CollectionType.VideoSeries}
+            title={data?.info?.title}
+            desc={data?.info?.intro}
+            cover={data?.info?.cover}
+            upMid={data?.info?.upper?.mid}
+            upName={data?.info?.upper?.name}
+            mediaCount={data?.info?.media_count}
+            collapsed={headerCollapsed}
+            afterChangeInfo={refreshAsync}
+            onPlayAll={onPlayAll}
+            onAddToPlayList={addToPlayList}
+          />
+
+          {/* 收起时隐藏搜索过滤器 */}
+          <div
+            className={`overflow-hidden transition-all duration-300 ${
+              headerCollapsed ? "max-h-0 opacity-0" : "max-h-20 opacity-100"
+            }`}
+          >
+            <SearchFilter
+              keyword={searchParams.keyword}
+              order={searchParams.order}
+              placeholder="请输入关键词"
+              searchIcon="search2"
+              orderOptions={[
+                { value: "", label: "默认排序" },
+                { value: "play", label: "播放量" },
+                { value: "collect", label: "收藏数" },
+                { value: "time", label: "发布时间" },
+              ]}
+              onKeywordChange={keyword => setSearchParams(prev => ({ ...prev, keyword }))}
+              onOrderChange={order => setSearchParams(prev => ({ ...prev, order }))}
+              containerClassName="mb-4 flex flex-wrap items-center gap-4"
+            />
+          </div>
+        </div>
+
+        {/* 虚拟列表 */}
+        {filteredMedias.length > 0 && (
+          <div className="min-h-0 flex-1">
+            <VirtualList
+              scrollerRef={virtualScrollerRef}
+              className="h-full"
+              data={filteredMedias}
+              itemHeight={64}
+              overscan={8}
+              renderItem={renderMediaItem}
+            />
+          </div>
+        )}
+
+        {showSkeleton && filteredMedias.length === 0 && (
+          <div className="space-y-2">
+            {Array.from({ length: 10 }, (_, i) => (
+              <Skeleton key={i} className="h-16 w-full rounded-lg" />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // 卡片模式
   return (
     <>
       <Info
@@ -206,15 +312,7 @@ const VideoSeries = () => {
         containerClassName="mb-6 flex flex-wrap items-center gap-4"
       />
 
-      {displayMode === "card" ? (
-        <GridList data={pagedMedias} loading={loading} itemKey="bvid" renderItem={renderMediaItem} />
-      ) : (
-        <div className="space-y-2">
-          {showSkeleton
-            ? Array.from({ length: 10 }, (_, i) => <Skeleton key={i} className="h-20 w-full rounded-lg" />)
-            : pagedMedias.map(renderMediaItem)}
-        </div>
-      )}
+      <GridList data={pagedMedias} loading={loading} itemKey="bvid" renderItem={renderMediaItem} />
       {totalPage > 1 && (
         <div className="flex w-full items-center justify-center py-6">
           <Pagination initialPage={1} page={page} total={totalPage} onChange={setPage} />

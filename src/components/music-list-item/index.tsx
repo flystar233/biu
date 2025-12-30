@@ -6,6 +6,7 @@ import clx from "classnames";
 
 import { formatDuration } from "@/common/utils";
 import { formatNumber } from "@/common/utils/number";
+import { formatBiliImageUrl } from "@/common/utils/url";
 import { usePlayList } from "@/store/play-list";
 
 import MVAction, { type ActionProps } from "../mv-action";
@@ -56,7 +57,8 @@ const MusicListItem = ({
             <Image
               removeWrapper
               radius="md"
-              src={cover}
+              loading="lazy"
+              src={formatBiliImageUrl(cover, 96)}
               alt={title}
               width="100%"
               height="100%"

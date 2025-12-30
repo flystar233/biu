@@ -13,6 +13,7 @@ interface VirtualListProps<T> {
   className?: string;
   empty?: React.ReactNode;
   scrollerRef?: React.RefObject<ScrollRefObject>;
+  initialScrollIndex?: number;
 }
 
 export function VirtualList<T>({
@@ -23,10 +24,12 @@ export function VirtualList<T>({
   className,
   empty,
   scrollerRef: propScrollerRef,
+  initialScrollIndex,
 }: VirtualListProps<T>) {
   const [container, setContainer] = useState<HTMLElement | null>(null);
   const internalScrollerRef = useRef<ScrollRefObject>(null);
   const scrollerRef = propScrollerRef || internalScrollerRef;
+  const hasScrolledToInitial = useRef(false);
 
   const virtualizer = useVirtualizer({
     count: data.length,
@@ -52,6 +55,16 @@ export function VirtualList<T>({
       }
     }
   }, [scrollerRef]);
+
+  // 在 container 准备好后滚动到初始位置
+  useEffect(() => {
+    if (container && initialScrollIndex !== undefined && !hasScrolledToInitial.current) {
+      requestAnimationFrame(() => {
+        virtualizer.scrollToIndex(initialScrollIndex, { align: "start" });
+        hasScrolledToInitial.current = true;
+      });
+    }
+  }, [container, initialScrollIndex, virtualizer]);
 
   return (
     <ScrollContainer

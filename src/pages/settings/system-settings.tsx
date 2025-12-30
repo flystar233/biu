@@ -8,6 +8,7 @@ import { RiArrowRightLongLine } from "@remixicon/react";
 import ColorPicker from "@/components/color-picker";
 import FontSelect from "@/components/font-select";
 import UpdateCheckButton from "@/components/update-check-button";
+import { usePlayList } from "@/store/play-list";
 import { defaultAppSettings, THEME_MODE_OPTIONS } from "@shared/settings/app-settings";
 
 import ImportExport from "./export-import";
@@ -33,6 +34,9 @@ export const SystemSettingsTab = ({
   latestVersion,
   setValue,
 }: SystemSettingsTabProps) => {
+  const shouldKeepPagesOrderInRandomPlayMode = usePlayList(s => s.shouldKeepPagesOrderInRandomPlayMode);
+  const setShouldKeepPagesOrderInRandomPlayMode = usePlayList(s => s.setShouldKeepPagesOrderInRandomPlayMode);
+
   return (
     <Form className="space-y-6">
       <h2>外观</h2>
@@ -216,6 +220,21 @@ export const SystemSettingsTab = ({
             )}
           />
         </div>
+      </div>
+      {/* 随机播放时保持分集顺序 */}
+      <div className="flex w-full items-center justify-between">
+        <div className="mr-6 space-y-1">
+          <div className="text-medium font-medium">随机播放时保持分集顺序</div>
+          <div className="text-sm text-zinc-500">随机播放多分集视频时按顺序播放分集</div>
+        </div>
+        <Button
+          className="w-[80px]"
+          variant={shouldKeepPagesOrderInRandomPlayMode ? "solid" : "bordered"}
+          color={shouldKeepPagesOrderInRandomPlayMode ? "primary" : "default"}
+          onPress={() => setShouldKeepPagesOrderInRandomPlayMode(!shouldKeepPagesOrderInRandomPlayMode)}
+        >
+          {shouldKeepPagesOrderInRandomPlayMode ? "已启用" : "未启用"}
+        </Button>
       </div>
 
       <Divider />

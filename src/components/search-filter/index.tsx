@@ -120,6 +120,7 @@ const SearchFilter: React.FC<SearchFilterProps> = ({
             className="w-full"
             style={{ minWidth: `${selectMinWidth}rem`, width: `${selectWidth}rem` }}
             placeholder="选择排序方式"
+            aria-label="排序方式"
           >
             {orderOptions.map(option => (
               <SelectItem key={option.value}>{option.label}</SelectItem>

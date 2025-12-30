@@ -28,6 +28,13 @@ const VideoPageListDrawer = () => {
     });
   }, [pages, searchKeyword]);
 
+  // 计算当前播放项在过滤后列表中的索引，用于初始滚动定位
+  const currentPlayIndex = useMemo(() => {
+    if (!playId) return undefined;
+    const index = filteredPages.findIndex(item => item.id === playId);
+    return index !== -1 ? index : undefined;
+  }, [filteredPages, playId]);
+
   const { isOpen, onOpen, onClose, onOpenChange } = useDisclosure();
 
   return (
@@ -72,6 +79,7 @@ const VideoPageListDrawer = () => {
             data={filteredPages}
             itemHeight={48}
             overscan={5}
+            initialScrollIndex={currentPlayIndex}
             empty={
               <div className="flex flex-col items-center justify-center px-4">
                 <Empty className="min-h-[180px]" />
@@ -80,7 +88,7 @@ const VideoPageListDrawer = () => {
             }
             renderItem={item => {
               const isActive = item.id === playId;
-              return <ListItem key={item.id} data={item} isActive={isActive} onClose={onClose} />;
+              return <ListItem key={item.id} data={item} isActive={isActive} />;
             }}
           />
         </PopoverContent>

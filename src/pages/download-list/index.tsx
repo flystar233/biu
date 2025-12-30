@@ -158,7 +158,9 @@ const DownloadList = () => {
                 </TableColumn>
               </TableHeader>
               <TableBody
-                items={downloadList.filter(item => fileType === "all" || item.outputFileType === fileType)}
+                items={downloadList
+                  .filter(item => fileType === "all" || item.outputFileType === fileType)
+                  .sort((a, b) => (b.createdTime ?? 0) - (a.createdTime ?? 0))}
                 emptyContent={<Empty />}
               >
                 {item => {
