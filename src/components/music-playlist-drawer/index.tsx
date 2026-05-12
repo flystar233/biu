@@ -48,6 +48,7 @@ const PlayListDrawer = () => {
           outputFileType: "audio",
           title: item.title,
           cover: item.cover,
+          duration: item.duration,
           bvid: item.bvid,
           sid: item.type === "audio" ? item.id : undefined,
         });
@@ -61,6 +62,7 @@ const PlayListDrawer = () => {
           outputFileType: "video",
           title: item.title,
           cover: item.cover,
+          duration: item.duration,
           bvid: item.bvid,
         });
         addToast({
@@ -117,13 +119,12 @@ const PlayListDrawer = () => {
       backdrop="transparent"
       size="sm"
       hideCloseButton
-      disableAnimation
       isOpen={isOpen}
       onOpenChange={setOpen}
       classNames={{
         backdrop: "z-200 window-no-drag",
         wrapper: "z-200 window-no-drag",
-        base: "data-[placement=right]:mb-22",
+        base: "data-[placement=right]:mb-22 !h-[67vh] self-end border-l-2 border-t-2 border-divider rounded-tl-md dark:bg-zinc-800",
       }}
     >
       <DrawerContent>

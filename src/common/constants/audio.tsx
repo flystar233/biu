@@ -1,6 +1,6 @@
 import { RiOrderPlayLine, RiRepeat2Line, RiRepeatOneLine, RiShuffleLine } from "@remixicon/react";
 
-export const PlayRate = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
+export const PlayRate = [0.5, 0.75, 1, 1.25, 1.5, 2];
 
 /**
  * 播放模式

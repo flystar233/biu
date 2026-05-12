@@ -142,10 +142,13 @@ const SideNav = () => {
   return (
     <>
       <div
-        className={clx("border-divider/30 relative flex h-full flex-none flex-col border-r-1", {
-          "transition-[width] duration-200": !isDragging,
-          "transition-none": isDragging,
-        })}
+        className={clx(
+          "border-divider/30 dark:bg-content1 relative flex h-full flex-none flex-col border-r-1 bg-neutral-200",
+          {
+            "transition-[width] duration-200": !isDragging,
+            "transition-none": isDragging,
+          },
+        )}
         style={{ width: `${renderWidth}px` }}
       >
         <Logo isCollapsed={isCollapsedVisual} />

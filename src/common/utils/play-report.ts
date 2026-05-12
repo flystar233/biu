@@ -3,7 +3,6 @@ import moment from "moment";
 
 import { postClickInterfaceClickWebH5 } from "@/service/click-interface-click-web-h5";
 import { postClickInterfaceWebHeartbeat } from "@/service/click-interface-web-heartbeat";
-import { useSettings } from "@/store/settings";
 import { useUser } from "@/store/user";
 
 const HEARTBEAT_INTERVAL_SECONDS = 30;
@@ -55,23 +54,10 @@ const generateSessionId = () => {
   return "";
 };
 
-const checkReportingEnabled = () => {
-  const { reportPlayHistory } = useSettings.getState();
-  if (!reportPlayHistory) {
-    currentSession = null;
-    return false;
-  }
-  return true;
-};
-
 /**
  * 开始上报：调用 click/web/h5 接口，建立心跳会话。
  */
 export async function beginPlayReport(item?: ReportablePlayItem) {
-  if (!checkReportingEnabled()) {
-    return;
-  }
-
   const aid = normalizeNumber(item?.aid);
   const cid = normalizeNumber(item?.cid);
 
@@ -135,10 +121,6 @@ export async function reportHeartbeat(
   duration?: number,
   playType: number = 0,
 ) {
-  if (!checkReportingEnabled()) {
-    return;
-  }
-
   if (!currentSession && item && item.type === "mv") {
     await beginPlayReport(item);
   }

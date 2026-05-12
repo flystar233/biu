@@ -186,6 +186,7 @@ const VideoCollections = () => {
           outputFileType: "audio",
           title: item.title,
           cover: item.cover,
+          duration: item.duration,
           bvid: item.bvid,
         });
         addToast({
@@ -198,6 +199,7 @@ const VideoCollections = () => {
           outputFileType: "video",
           title: item.title,
           cover: item.cover,
+          duration: item.duration,
           bvid: item.bvid,
         });
         addToast({

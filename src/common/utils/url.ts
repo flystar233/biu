@@ -11,7 +11,12 @@ export const formatUrlProtocol = (url?: string) => {
   return url;
 };
 
-const getBiliVideoLink = (data: { type: "mv" | "audio"; bvid?: string; sid?: string | number; pageIndex?: number }) => {
+export const getBiliVideoLink = (data: {
+  type: "mv" | "audio";
+  bvid?: string;
+  sid?: string | number;
+  pageIndex?: number;
+}) => {
   return `https://www.bilibili.com/${data?.type === "mv" ? `video/${data?.bvid}${(data.pageIndex ?? 0) > 1 ? `?p=${data.pageIndex}` : ""}` : `audio/au${data?.sid}`}`;
 };
 

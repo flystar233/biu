@@ -398,6 +398,7 @@ const Favorites = () => {
             outputFileType: "audio",
             title: item.title,
             cover: item.cover,
+            duration: item.duration,
             bvid: item.bvid,
             sid: item.type === 12 ? item.id : undefined,
           });
@@ -411,6 +412,7 @@ const Favorites = () => {
             outputFileType: "video",
             title: item.title,
             cover: item.cover,
+            duration: item.duration,
             bvid: item.bvid,
           });
           addToast({

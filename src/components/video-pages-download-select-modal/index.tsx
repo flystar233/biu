@@ -41,6 +41,7 @@ const VideoPagesDownloadSelectModal = () => {
           title: title!,
           bvid,
           cid,
+          duration: res.data[0].duration,
         });
         onVideoPageDownloadModalOpenChange(false);
         addToast({
@@ -67,6 +68,7 @@ const VideoPagesDownloadSelectModal = () => {
           bvid: bvid!,
           cover: item.first_frame || cover,
           cid: String(item.cid),
+          duration: item.duration,
         })),
     );
     onVideoPageDownloadModalOpenChange(false);

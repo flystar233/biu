@@ -7,6 +7,7 @@ import { useShallow } from "zustand/react/shallow";
 import ScrollContainer from "@/components/scroll-container";
 import { useAppUpdateStore } from "@/store/app-update";
 import { useSettings } from "@/store/settings";
+import { defaultAppSettings } from "@shared/settings/app-settings";
 
 import MenuSettings from "./menu-settings";
 import ProxySettings from "./proxy-settings";
@@ -19,7 +20,6 @@ const useSystemSettingsForm = () => {
     fontFamily,
     primaryColor,
     backgroundColor,
-    borderRadius,
     downloadPath,
     closeWindowOption,
     autoStart,
@@ -31,13 +31,18 @@ const useSystemSettingsForm = () => {
     pageTransition,
     showSearchHistory,
     proxySettings,
-    reportPlayHistory,
+    showLyrics,
+    lyricsColor,
+    showSpectrum,
+    showCover,
+    showBlurredBackground,
+    fullScreenBackgroundColor,
+    searchMusicOnly,
   } = useSettings(
     useShallow(s => ({
       fontFamily: s.fontFamily,
       primaryColor: s.primaryColor,
       backgroundColor: s.backgroundColor,
-      borderRadius: s.borderRadius,
       downloadPath: s.downloadPath,
       closeWindowOption: s.closeWindowOption,
       autoStart: s.autoStart,
@@ -48,11 +53,18 @@ const useSystemSettingsForm = () => {
       themeMode: s.themeMode,
       pageTransition: s.pageTransition,
       showSearchHistory: s.showSearchHistory,
+      searchMusicOnly: s.searchMusicOnly,
       proxySettings: s.proxySettings,
-      reportPlayHistory: s.reportPlayHistory,
+      showLyrics: s.showLyrics,
+      lyricsColor: s.lyricsColor,
+      showSpectrum: s.showSpectrum,
+      showCover: s.showCover,
+      showBlurredBackground: s.showBlurredBackground,
+      fullScreenBackgroundColor: s.fullScreenBackgroundColor,
     })),
   );
   const updateSettings = useSettings(s => s.update);
+  const resetSettings = useSettings(s => s.reset);
   const { isUpdateAvailable, latestVersion } = useAppUpdateStore(
     useShallow(s => ({
       isUpdateAvailable: s.isUpdateAvailable ?? false,
@@ -60,12 +72,11 @@ const useSystemSettingsForm = () => {
     })),
   );
 
-  const { control, watch, setValue } = useForm<AppSettings>({
+  const { control, watch, setValue, reset } = useForm<AppSettings>({
     defaultValues: {
       fontFamily,
       primaryColor,
       backgroundColor,
-      borderRadius,
       downloadPath,
       closeWindowOption,
       autoStart,
@@ -83,7 +94,13 @@ const useSystemSettingsForm = () => {
         username: "",
         password: "",
       },
-      reportPlayHistory,
+      showLyrics,
+      lyricsColor,
+      showSpectrum,
+      showCover,
+      showBlurredBackground,
+      fullScreenBackgroundColor,
+      searchMusicOnly,
     },
   });
 
@@ -103,6 +120,11 @@ const useSystemSettingsForm = () => {
     window.electron.getAppVersion().then(v => setAppVersion(v));
   }, []);
 
+  const handleReset = () => {
+    resetSettings();
+    reset(defaultAppSettings);
+  };
+
   return {
     appVersion,
     audioQuality,
@@ -110,6 +132,7 @@ const useSystemSettingsForm = () => {
     isUpdateAvailable,
     latestVersion,
     setValue,
+    handleReset,
   };
 };
 

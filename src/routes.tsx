@@ -2,7 +2,6 @@ import type { RouteObject } from "react-router";
 
 import Layout from "./layout";
 import DownloadList from "./pages/download-list";
-import DynamicFeed from "./pages/dynamic-feed";
 import EmptyPage from "./pages/empty";
 import FollowList from "./pages/follow-list";
 import History from "./pages/history";
@@ -30,12 +29,12 @@ const routes: RouteObject[] = [
         element: <Later />,
       },
       {
-        path: "history",
-        element: <History />,
-      },
-      {
         path: "follow",
         element: <FollowList />,
+      },
+      {
+        path: "history",
+        element: <History />,
       },
       {
         path: "collection/:id",
@@ -52,10 +51,6 @@ const routes: RouteObject[] = [
       {
         path: "download-list",
         element: <DownloadList />,
-      },
-      {
-        path: "dynamic-feed",
-        element: <DynamicFeed />,
       },
       {
         path: "local-music",

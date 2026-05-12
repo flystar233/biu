@@ -34,7 +34,7 @@ const AudioWaveform = ({ width = 56, height = 56, barCount = 40, barColor = "cur
       if (!audioContext) {
         audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
         analyser = audioContext.createAnalyser();
-        analyser.fftSize = 512; // Increased for better resolution
+        analyser.fftSize = 1024;
 
         try {
           // Connect the global audio element to the analyser
@@ -83,20 +83,20 @@ const AudioWaveform = ({ width = 56, height = 56, barCount = 40, barColor = "cur
       const barGap = computedBarWidth * 0.2;
       const barWidth = computedBarWidth - barGap;
 
-      // Focus on the lower 60% of the frequency spectrum (most music energy)
-      // With fftSize=512, bufferLength=256.
-      // 0.6 * 256 * (44100/512) ≈ 13kHz coverage
-      const usefulBufferLength = Math.floor(bufferLength * 0.6);
+      // Power-curve frequency mapping: concentrates bars in lower frequencies
+      // without being as extreme as pure logarithmic. Exponent > 1 shifts
+      // more bars toward bass; closer to 1 is more linear.
+      const maxBin = Math.floor(bufferLength * 0.45);
+      const minBin = 1;
 
-      // Draw bars
       for (let i = 0; i < barCount; i++) {
-        // Map bar index to frequency data index
-        const dataIndex = Math.floor((i / barCount) * usefulBufferLength);
-        let value = dataArray[dataIndex];
+        const t = i / (barCount - 1 || 1);
+        const dataIndex = Math.floor(minBin + Math.pow(t, 1.8) * (maxBin - minBin));
 
-        // Boost high frequencies (right side) as they are naturally quieter
-        // Linear boost from 1x to 2x
-        const boost = 1 + i / barCount;
+        let value = dataArray[Math.min(dataIndex, maxBin)];
+
+        // Gentle boost for high frequencies: 1x → 1.6x
+        const boost = 1 + (i / barCount) * 0.6;
         value = Math.min(255, value * boost);
 
         // Calculate bar height based on value (0-255)

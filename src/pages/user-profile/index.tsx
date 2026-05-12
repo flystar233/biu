@@ -12,7 +12,6 @@ import { getSpaceWbiAccInfo } from "@/service/space-wbi-acc-info";
 import { getSpaceWbiAccRelation } from "@/service/space-wbi-acc-relation";
 import { useUser } from "@/store/user";
 
-import DynamicList from "./dynamic-list";
 import Favorites from "./favorites";
 import VideoPost from "./post";
 import VideoSeries from "./series";
@@ -87,16 +86,6 @@ const UserProfile = () => {
   );
 
   const tabs = [
-    {
-      label: "动态",
-      key: "dynamic",
-      content: (
-        <DynamicList
-          mid={Number(id)}
-          getScrollElement={() => scrollRef.current?.osInstance()?.elements().viewport || null}
-        />
-      ),
-    },
     {
       label: "投稿",
       key: "video",

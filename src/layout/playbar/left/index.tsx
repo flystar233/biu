@@ -1,23 +1,19 @@
 import React, { useMemo } from "react";
 import { useNavigate } from "react-router";
 
-import { Chip } from "@heroui/react";
+import { addToast, Chip } from "@heroui/react";
 import { RiArrowUpSLine, RiMusic2Line } from "@remixicon/react";
 import clsx from "classnames";
 
-import { openBiliVideoLink } from "@/common/utils/url";
+import { getBiliVideoLink } from "@/common/utils/url";
 import Image from "@/components/image";
-import MusicFavButton from "@/components/music-fav-button";
-import MusicThumb from "@/components/music-thumb";
 import { useModalStore } from "@/store/modal";
 import { usePlayList } from "@/store/play-list";
-import { useUser } from "@/store/user";
 
 import PageListDrawer from "./page-list";
 
 const LeftControl = () => {
   const navigate = useNavigate();
-  const user = useUser(s => s.user);
   const open = useModalStore(s => s.openFullScreenPlayer);
   const list = usePlayList(s => s.list);
   const playId = usePlayList(s => s.playId);
@@ -51,9 +47,11 @@ const LeftControl = () => {
               "cursor-pointer": isClickable,
               "hover:underline": isClickable,
             })}
-            onClick={() => {
+            onClick={async () => {
               if (!isClickable || !playItem) return;
-              openBiliVideoLink(playItem);
+              const link = getBiliVideoLink(playItem);
+              await navigator.clipboard.writeText(link);
+              addToast({ title: "链接已复制", color: "success" });
             }}
           >
             {playItem?.pageTitle || playItem?.title}
@@ -82,15 +80,7 @@ const LeftControl = () => {
           {playItem?.source === "local" ? "本地音乐" : playItem?.ownerName || "未知"}
         </span>
       </div>
-      <div className="flex items-center">
-        {Boolean(playItem?.hasMultiPart) && <PageListDrawer />}
-        {Boolean(user?.isLogin) && Boolean(playItem) && playItem?.source !== "local" && (
-          <>
-            <MusicFavButton />
-            <MusicThumb />
-          </>
-        )}
-      </div>
+      <div className="flex items-center">{Boolean(playItem?.hasMultiPart) && <PageListDrawer />}</div>
     </div>
   );
 };

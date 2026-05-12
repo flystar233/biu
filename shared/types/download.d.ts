@@ -18,6 +18,8 @@ interface MediaDownloadInfo {
   title: string;
   /** 封面 */
   cover?: string;
+  /** 时长(秒) */
+  duration?: number;
   /** 视频bvid */
   bvid?: string;
   /** 视频分集cid */

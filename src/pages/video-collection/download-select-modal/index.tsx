@@ -25,6 +25,7 @@ interface MediaData {
   sid?: number | string;
   title: string;
   cover: string;
+  duration?: number;
 }
 
 const DownloadSelectModal = ({ type, outputFileType, mediaCount, isOpen, onOpenChange }: DownloadSelectModalProps) => {
@@ -48,6 +49,7 @@ const DownloadSelectModal = ({ type, outputFileType, mediaCount, isOpen, onOpenC
             sid: item.sid,
             title: item.title,
             cover: item.cover,
+            duration: item.duration,
           }));
         setList(medias);
         setSelectedIds(medias.map(item => item.id));
@@ -64,6 +66,7 @@ const DownloadSelectModal = ({ type, outputFileType, mediaCount, isOpen, onOpenC
           bvid: item.bvid,
           title: item.title,
           cover: item.cover,
+          duration: item.duration,
         }));
         setList(medias);
         setSelectedIds(medias.map(item => item.id));
@@ -82,6 +85,7 @@ const DownloadSelectModal = ({ type, outputFileType, mediaCount, isOpen, onOpenC
             sid: media?.sid,
             title: media?.title as string,
             cover: media?.cover,
+            duration: media?.duration,
           };
         }),
       );

@@ -18,7 +18,6 @@ import { useModalStore } from "@/store/modal";
 import { useUser } from "@/store/user";
 
 import GroupModal from "./group-modal";
-import SetGroupModal from "./set-group-modal";
 import UserCard from "./user-card";
 
 const PAGE_SIZE = 20;
@@ -55,10 +54,6 @@ const FollowList = () => {
   const { isOpen, onOpen, onOpenChange, onClose } = useDisclosure();
   const [modalMode, setModalMode] = useState<"create" | "rename">("create");
   const [currentTag, setCurrentTag] = useState<RelationTag | null>(null);
-
-  // Modal State for Set Group
-  const setGroupModalDisclosure = useDisclosure();
-  const [currentOperatingUser, setCurrentOperatingUser] = useState<RelationListItem | RelationTagUser | null>(null);
 
   // Derived state for current active tag
   const activeTagId = Number(activeTab);
@@ -134,12 +129,6 @@ const FollowList = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.mid, activeTab, searchKeyword]);
 
-  const reload = async () => {
-    setList([]);
-    setHasMore(true);
-    await init();
-  };
-
   const loadMore = async () => {
     if (loading || !hasMore) return;
     try {
@@ -190,11 +179,6 @@ const FollowList = () => {
         }
       },
     });
-  };
-
-  const handleOpenSetGroup = (u: RelationListItem | RelationTagUser) => {
-    setCurrentOperatingUser(u);
-    setGroupModalDisclosure.onOpen();
   };
 
   return (
@@ -310,10 +294,13 @@ const FollowList = () => {
                 <VirtualGridPageList
                   items={list}
                   itemKey="mid"
-                  renderItem={item => <UserCard u={item} refresh={reload} onSetGroup={handleOpenSetGroup} />}
+                  renderItem={item => <UserCard u={item} />}
                   getScrollElement={() => scrollRef.current?.osInstance()?.elements().viewport || null}
                   onLoadMore={loadMore}
-                  rowHeight={240}
+                  rowHeight={140}
+                  columnFactor={2}
+                  columnGap={16}
+                  gap={16}
                   hasMore={hasMore}
                   loading={loading}
                 />
@@ -329,16 +316,7 @@ const FollowList = () => {
         mode={modalMode}
         tag={currentTag}
         onSuccess={fetchTags}
-      />
-
-      <SetGroupModal
-        isOpen={setGroupModalDisclosure.isOpen}
-        onOpenChange={setGroupModalDisclosure.onOpenChange}
-        onClose={setGroupModalDisclosure.onClose}
-        user={currentOperatingUser}
-        tags={tags}
-        onSuccess={reload}
-      />
+      />{" "}
     </>
   );
 };

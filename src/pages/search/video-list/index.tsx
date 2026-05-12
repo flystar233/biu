@@ -20,8 +20,8 @@ export type SearchVideoProps = {
 
 export default function SearchVideo({ keyword, getScrollElement }: SearchVideoProps) {
   const displayMode = useSettings(state => state.displayMode);
+  const musicOnly = useSettings(state => state.searchMusicOnly);
 
-  const [musicOnly, setMusicOnly] = useState(true);
   const [order, setOrder] = useState<SortOrder>("totalrank");
   const [list, setList] = useState<SearchVideoItem[]>([]);
   const [page, setPage] = useState(1);
@@ -86,20 +86,6 @@ export default function SearchVideo({ keyword, getScrollElement }: SearchVideoPr
     retryInitial();
   }, [retryInitial]);
 
-  const handlePlayAll = useCallback(async () => {
-    const items = list.map(item => ({
-      type: "mv" as const,
-      bvid: item.bvid,
-      title: item.title,
-      cover: formatUrlProtocol(item.pic),
-      ownerName: item.author,
-      ownerMid: item.mid,
-    }));
-
-    await usePlayList.getState().addList(items);
-    addToast({ title: `已添加 ${items.length} 首到播放列表`, color: "success" });
-  }, [list]);
-
   const handleMenuAction = useCallback(async (key: string, item: SearchVideoItem) => {
     const musicItem = {
       type: "mv" as const,
@@ -123,12 +109,7 @@ export default function SearchVideo({ keyword, getScrollElement }: SearchVideoPr
         useModalStore.getState().onOpenFavSelectModal({
           rid: item.aid,
           type: 2,
-          title: (
-            <div>
-              收藏
-              <span dangerouslySetInnerHTML={{ __html: item.title }} />
-            </div>
-          ),
+          title: `收藏 ${item.title.replace(/<[^>]*>/g, "")}`,
         });
         break;
       case "download-audio":
@@ -136,6 +117,7 @@ export default function SearchVideo({ keyword, getScrollElement }: SearchVideoPr
           outputFileType: "audio",
           title: item.title,
           cover: formatUrlProtocol(item.pic),
+          duration: typeof item.duration === "number" ? item.duration : undefined,
           bvid: item.bvid,
         });
         addToast({
@@ -148,6 +130,7 @@ export default function SearchVideo({ keyword, getScrollElement }: SearchVideoPr
           outputFileType: "video",
           title: item.title,
           cover: formatUrlProtocol(item.pic),
+          duration: typeof item.duration === "number" ? item.duration : undefined,
           bvid: item.bvid,
         });
         addToast({
@@ -165,14 +148,7 @@ export default function SearchVideo({ keyword, getScrollElement }: SearchVideoPr
 
   return (
     <>
-      <SearchHeader
-        order={order}
-        onOrderChange={setOrder}
-        musicOnly={musicOnly}
-        onMusicOnlyChange={setMusicOnly}
-        onPlayAll={handlePlayAll}
-        playAllDisabled={initialLoading || list.length === 0}
-      />
+      <SearchHeader order={order} onOrderChange={setOrder} />
       {initialLoading && (
         <div className="flex min-h-[280px] items-center justify-center">
           <Spinner label="加载中" />

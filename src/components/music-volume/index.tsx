@@ -122,8 +122,11 @@ const Volume = () => {
       shouldCloseOnBlur={false}
       isOpen={isTooltipOpen}
       onOpenChange={setIsTooltipOpen}
+      classNames={{
+        content: "py-3 px-2 w-[60px] min-w-[60px]",
+      }}
       content={
-        <div ref={setSliderRef} className="flex items-center justify-center p-3">
+        <div ref={setSliderRef} className="flex flex-col items-center gap-1">
           <Slider
             disableAnimation
             aria-label="音量"
@@ -141,12 +144,8 @@ const Volume = () => {
               trackWrapper: "h-40 w-[32px]",
               thumb: "after:hidden",
             }}
-            endContent={
-              <span className="text-foreground/60 w-8 text-center text-xs tabular-nums">
-                {Math.round(volume * 100)}%
-              </span>
-            }
           />
+          <span className="text-foreground/60 text-center text-xs tabular-nums">{Math.round(volume * 100)}%</span>
         </div>
       }
     >

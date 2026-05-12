@@ -1,36 +1,13 @@
 import React from "react";
-import { Controller } from "react-hook-form";
+import { Controller, useWatch } from "react-hook-form";
 import type { Control, UseFormSetValue } from "react-hook-form";
 
-import {
-  Button,
-  Divider,
-  Form,
-  Input,
-  Radio,
-  RadioGroup,
-  Select,
-  SelectItem,
-  Slider,
-  Switch,
-  Tab,
-  Tabs,
-} from "@heroui/react";
-import {
-  RiArrowRightLongLine,
-  RiComputerLine,
-  RiFileListLine,
-  RiLayoutGridFill,
-  RiListView,
-  RiMoonLine,
-  RiSunLine,
-} from "@remixicon/react";
+import { Button, Divider, Form, Input, Select, SelectItem, Switch } from "@heroui/react";
+import { RiArrowRightLongLine } from "@remixicon/react";
 
+import ColorPicker from "@/components/color-picker";
 import FontSelect from "@/components/font-select";
 import UpdateCheckButton from "@/components/update-check-button";
-
-import ColorSettings from "./color-settings";
-import ImportExport from "./export-import";
 
 type SystemSettingsTabProps = {
   appVersion: string;
@@ -39,6 +16,7 @@ type SystemSettingsTabProps = {
   isUpdateAvailable: boolean;
   latestVersion?: string;
   setValue: UseFormSetValue<AppSettings>;
+  handleReset: () => void;
 };
 
 export const SystemSettingsTab = ({
@@ -48,6 +26,7 @@ export const SystemSettingsTab = ({
   isUpdateAvailable,
   latestVersion,
   setValue,
+  handleReset,
 }: SystemSettingsTabProps) => {
   return (
     <Form className="space-y-6">
@@ -58,48 +37,27 @@ export const SystemSettingsTab = ({
           <div className="text-medium font-medium">数据显示样式</div>
           <div className="text-sm text-zinc-500">选择媒体内容的显示样式</div>
         </div>
-        <Controller
-          control={control}
-          name="displayMode"
-          render={({ field }) => (
-            <Tabs
-              aria-label="数据展示"
-              classNames={{
-                cursor: "rounded-medium",
-              }}
-              selectedKey={field.value}
-              onSelectionChange={key => field.onChange(key)}
-            >
-              <Tab
-                key="list"
-                title={
-                  <div className="flex items-center space-x-2">
-                    <RiListView size={18} />
-                    <span>列表</span>
-                  </div>
-                }
-              />
-              <Tab
-                key="card"
-                title={
-                  <div className="flex items-center space-x-2">
-                    <RiLayoutGridFill size={18} />
-                    <span>网格</span>
-                  </div>
-                }
-              />
-              <Tab
-                key="compact"
-                title={
-                  <div className="flex items-center space-x-2">
-                    <RiFileListLine size={18} />
-                    <span>紧凑</span>
-                  </div>
-                }
-              />
-            </Tabs>
-          )}
-        />
+        <div className="w-[180px]">
+          <Controller
+            control={control}
+            name="displayMode"
+            render={({ field }) => (
+              <Select
+                disallowEmptySelection
+                aria-label="数据显示样式"
+                selectedKeys={field.value ? new Set([field.value]) : new Set()}
+                onSelectionChange={keys => {
+                  const value = Array.from(keys)[0] as "list" | "card" | "compact";
+                  field.onChange(value);
+                }}
+              >
+                <SelectItem key="list">列表</SelectItem>
+                <SelectItem key="card">网格</SelectItem>
+                <SelectItem key="compact">紧凑</SelectItem>
+              </Select>
+            )}
+          />
+        </div>
       </div>
       {/* 主题模式 */}
       <div className="flex w-full items-center justify-between">
@@ -108,52 +66,27 @@ export const SystemSettingsTab = ({
           <div className="text-sm text-zinc-500">选择浅色或深色主题</div>
         </div>
 
-        <Controller
-          control={control}
-          name="themeMode"
-          render={({ field }) => (
-            <Tabs
-              aria-label="主题切换"
-              classNames={{
-                cursor: "rounded-medium",
-              }}
-              selectedKey={field.value}
-              onSelectionChange={key => field.onChange(key)}
-            >
-              <Tab
-                key="system"
-                title={
-                  <div className="flex items-center space-x-2">
-                    <RiComputerLine size={18} />
-                    <span>跟随系统</span>
-                  </div>
-                }
-              />
-              <Tab
-                key="light"
-                title={
-                  <div className="flex items-center space-x-2">
-                    <RiSunLine size={18} />
-                    <span>浅色</span>
-                  </div>
-                }
-              />
-              <Tab
-                key="dark"
-                title={
-                  <div className="flex items-center space-x-2">
-                    <RiMoonLine size={18} />
-                    <span>深色</span>
-                  </div>
-                }
-              />
-            </Tabs>
-          )}
-        />
-      </div>
-      {/* color 自定义 */}
-      <div className="w-full">
-        <ColorSettings control={control} />
+        <div className="w-[180px]">
+          <Controller
+            control={control}
+            name="themeMode"
+            render={({ field }) => (
+              <Select
+                disallowEmptySelection
+                aria-label="主题"
+                selectedKeys={field.value ? new Set([field.value]) : new Set()}
+                onSelectionChange={keys => {
+                  const value = Array.from(keys)[0] as ThemeMode;
+                  field.onChange(value);
+                }}
+              >
+                <SelectItem key="system">跟随系统</SelectItem>
+                <SelectItem key="light">浅色</SelectItem>
+                <SelectItem key="dark">深色</SelectItem>
+              </Select>
+            )}
+          />
+        </div>
       </div>
       {/* 字体选择 */}
       <div className="flex w-full items-center justify-between">
@@ -199,35 +132,6 @@ export const SystemSettingsTab = ({
           />
         </div>
       </div> */}
-      {/* 全局圆角设置 */}
-      <div className="flex w-full items-center justify-between">
-        <div className="mr-6 space-y-1">
-          <div className="text-medium font-medium">圆角</div>
-          <div className="text-sm text-zinc-500">调整界面控件的圆角大小</div>
-        </div>
-        <div className="w-[360px]">
-          <Controller
-            control={control}
-            name="borderRadius"
-            render={({ field }) => (
-              <Slider
-                showTooltip={false}
-                size="sm"
-                endContent={<span>{field.value}px</span>}
-                aria-label="全局圆角"
-                value={field.value}
-                onChange={v => field.onChange(Number(v))}
-                minValue={0}
-                maxValue={24}
-                step={1}
-                classNames={{
-                  thumb: "after:hidden",
-                }}
-              />
-            )}
-          />
-        </div>
-      </div>
       <Divider />
       <h2>播放</h2>
       {/* 音质选择 */}
@@ -266,19 +170,9 @@ export const SystemSettingsTab = ({
           />
         </div>
       </div>
-      {/* 播放记录上报 */}
-      <div className="flex w-full items-center justify-between">
-        <div className="mr-6 space-y-1">
-          <div className="text-medium font-medium">上报本机播放记录</div>
-          <div className="text-sm text-zinc-500">将播放进度同步到Bilibili服务器</div>
-        </div>
-        <Controller
-          control={control}
-          name="reportPlayHistory"
-          render={({ field }) => <Switch disableAnimation isSelected={field.value} onValueChange={field.onChange} />}
-        />
-      </div>
-
+      <Divider />
+      <h2>全屏播放器</h2>
+      <FullScreenPlayerSettings control={control} />
       <Divider />
       <h2>下载</h2>
       <div className="flex w-full items-center justify-between">
@@ -337,6 +231,18 @@ export const SystemSettingsTab = ({
       </div>
       <Divider />
       <h2>搜索</h2>
+      {/* 仅音乐分区 */}
+      <div className="flex w-full items-center justify-between">
+        <div className="mr-6 space-y-1">
+          <div className="text-medium font-medium">仅音乐分区</div>
+          <div className="text-sm text-zinc-500">搜索视频时默认仅显示音乐分区内容</div>
+        </div>
+        <Controller
+          control={control}
+          name="searchMusicOnly"
+          render={({ field }) => <Switch disableAnimation isSelected={field.value} onValueChange={field.onChange} />}
+        />
+      </div>
       {/* 显示搜索历史 */}
       <div className="flex w-full items-center justify-between">
         <div className="mr-6 space-y-1">
@@ -358,16 +264,26 @@ export const SystemSettingsTab = ({
           <div className="text-medium font-medium">窗口关闭</div>
           <div className="text-sm text-zinc-500">选择窗口关闭时的行为</div>
         </div>
-        <Controller
-          control={control}
-          name="closeWindowOption"
-          render={({ field }) => (
-            <RadioGroup orientation="horizontal" value={field.value} onValueChange={field.onChange}>
-              <Radio value="hide">隐藏到托盘</Radio>
-              <Radio value="exit">直接退出</Radio>
-            </RadioGroup>
-          )}
-        />
+        <div className="w-[180px]">
+          <Controller
+            control={control}
+            name="closeWindowOption"
+            render={({ field }) => (
+              <Select
+                disallowEmptySelection
+                aria-label="窗口关闭"
+                selectedKeys={field.value ? new Set([field.value]) : new Set()}
+                onSelectionChange={keys => {
+                  const value = Array.from(keys)[0] as "hide" | "exit";
+                  field.onChange(value);
+                }}
+              >
+                <SelectItem key="hide">隐藏到托盘</SelectItem>
+                <SelectItem key="exit">直接退出</SelectItem>
+              </Select>
+            )}
+          />
+        </div>
       </div>
 
       {/* 开机自启动开关 */}
@@ -397,9 +313,102 @@ export const SystemSettingsTab = ({
             </>
           )}
         </div>
-        <UpdateCheckButton />
+        <div className="flex items-center gap-2">
+          <Button variant="flat" onPress={handleReset}>
+            恢复默认
+          </Button>
+          <UpdateCheckButton />
+        </div>
       </div>
-      <ImportExport />
     </Form>
+  );
+};
+
+const ColorTrigger = ({ color, ...rest }: { color?: string } & Record<string, unknown>) => (
+  <Button
+    {...rest}
+    isIconOnly
+    size="sm"
+    variant="bordered"
+    className="border-default h-8 w-8 min-w-0 rounded-md"
+    style={{ backgroundColor: color || "#ffffff" }}
+  />
+);
+
+const FullScreenPlayerSettings = ({ control }: { control: Control<AppSettings> }) => {
+  const showBlurredBackground = useWatch({ control, name: "showBlurredBackground" });
+
+  return (
+    <>
+      {/* 显示歌词 */}
+      <div className="flex w-full items-center justify-between">
+        <div className="mr-6 space-y-1">
+          <div className="text-medium font-medium">显示歌词</div>
+          <div className="text-sm text-zinc-500">在全屏播放器中显示歌词</div>
+        </div>
+        <Controller
+          control={control}
+          name="showLyrics"
+          render={({ field }) => <Switch disableAnimation isSelected={field.value} onValueChange={field.onChange} />}
+        />
+      </div>
+      {/* 显示频谱图 */}
+      <div className="flex w-full items-center justify-between">
+        <div className="mr-6 space-y-1">
+          <div className="text-medium font-medium">显示频谱图</div>
+          <div className="text-sm text-zinc-500">在全屏播放器中显示音频频谱动画</div>
+        </div>
+        <Controller
+          control={control}
+          name="showSpectrum"
+          render={({ field }) => <Switch disableAnimation isSelected={field.value} onValueChange={field.onChange} />}
+        />
+      </div>
+      {/* 显示封面 */}
+      <div className="flex w-full items-center justify-between">
+        <div className="mr-6 space-y-1">
+          <div className="text-medium font-medium">显示封面</div>
+          <div className="text-sm text-zinc-500">在全屏播放器中显示歌曲封面</div>
+        </div>
+        <Controller
+          control={control}
+          name="showCover"
+          render={({ field }) => <Switch disableAnimation isSelected={field.value} onValueChange={field.onChange} />}
+        />
+      </div>
+      {/* 显示虚化背景 */}
+      <div className="flex w-full items-center justify-between">
+        <div className="mr-6 space-y-1">
+          <div className="text-medium font-medium">显示虚化背景</div>
+          <div className="text-sm text-zinc-500">在全屏播放器中使用虚化封面作为背景</div>
+        </div>
+        <Controller
+          control={control}
+          name="showBlurredBackground"
+          render={({ field }) => <Switch disableAnimation isSelected={field.value} onValueChange={field.onChange} />}
+        />
+      </div>
+      {!showBlurredBackground && (
+        <div className="flex w-full items-center justify-between">
+          <div className="mr-6 space-y-1">
+            <div className="text-medium font-medium">背景颜色</div>
+            <div className="text-sm text-zinc-500">设置全屏播放器的纯色背景</div>
+          </div>
+          <Controller
+            control={control}
+            name="fullScreenBackgroundColor"
+            render={({ field }) => (
+              <ColorPicker
+                value={field.value}
+                onChange={field.onChange}
+                presets={["#000000", "#1a1a2e", "#16213e", "#0f3460", "#533483"]}
+              >
+                <ColorTrigger color={field.value} />
+              </ColorPicker>
+            )}
+          />
+        </div>
+      )}
+    </>
   );
 };

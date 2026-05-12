@@ -55,6 +55,7 @@ export const getVideoPages = async (bvid: string) => {
       cid: page.cid,
       title: page.part,
       cover: page.first_frame,
+      duration: page.duration,
     })) || []
   );
 };

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 
 import { addToast, Tooltip, Listbox, ListboxItem } from "@heroui/react";
-import { RiDownload2Fill, RiFileImageLine, RiFileMusicLine, RiFileVideoLine } from "@remixicon/react";
+import { RiDownload2Fill, RiFileMusicLine, RiFileVideoLine } from "@remixicon/react";
 
 import AsyncButton from "@/components/async-button";
 import IconButton from "@/components/icon-button";
@@ -18,6 +18,7 @@ const MusicDownloadButton = () => {
       outputFileType: "audio",
       title: playItem?.pageTitle || playItem?.title || `audio-${Date.now()}`,
       cover: playItem?.pageCover || playItem?.cover,
+      duration: playItem?.duration,
       bvid: playItem?.bvid,
       cid: playItem?.cid,
       sid: playItem?.type === "audio" ? playItem?.sid : undefined,
@@ -34,6 +35,7 @@ const MusicDownloadButton = () => {
       outputFileType: "video",
       title: playItem?.pageTitle || playItem?.title || `video-${Date.now()}`,
       cover: playItem?.pageCover || playItem?.cover,
+      duration: playItem?.duration,
       bvid: playItem?.bvid,
       cid: playItem?.cid,
     });
@@ -42,46 +44,6 @@ const MusicDownloadButton = () => {
       title: "已添加下载任务",
       color: "success",
     });
-  };
-
-  const downloadCover = async () => {
-    const coverUrl = playItem?.pageCover || playItem?.cover;
-
-    if (!coverUrl) {
-      addToast({
-        title: "没有可下载的封面",
-        color: "warning",
-      });
-      return;
-    }
-
-    try {
-      const response = await fetch(coverUrl);
-
-      if (!response.ok) {
-        throw new Error(`下载失败，状态码 ${response.status}`);
-      }
-
-      const blob = await response.blob();
-      const ext = blob.type?.split("/")?.[1] || "jpg";
-      const name = (playItem?.pageTitle || playItem?.title || "cover").replace(/[\\/:*?"<>|]/g, "_");
-
-      const link = document.createElement("a");
-      const objectUrl = URL.createObjectURL(blob);
-      link.href = objectUrl;
-      link.download = `${name}-cover.${ext}`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(objectUrl);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "未知错误";
-      addToast({
-        title: "封面下载失败",
-        description: message,
-        color: "danger",
-      });
-    }
   };
 
   if (playItem?.sid) {
@@ -114,8 +76,6 @@ const MusicDownloadButton = () => {
               void downloadAudio();
             } else if (key === "video") {
               void downloadVideo();
-            } else if (key === "cover") {
-              void downloadCover();
             }
             setIsTooltipOpen(false);
           }}
@@ -135,14 +95,6 @@ const MusicDownloadButton = () => {
             startContent={<RiFileVideoLine size={16} />}
           >
             下载视频
-          </ListboxItem>
-          <ListboxItem
-            className="rounded-medium"
-            key="cover"
-            textValue="下载封面"
-            startContent={<RiFileImageLine size={16} />}
-          >
-            下载封面
           </ListboxItem>
         </Listbox>
       }

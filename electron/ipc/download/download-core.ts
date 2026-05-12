@@ -25,6 +25,7 @@ export class DownloadCore extends EventEmitter {
   public id: string;
   public title!: string;
   public cover?: string;
+  public duration?: number;
   public createdTime?: number;
   public bvid?: string;
   public cid?: string | number;

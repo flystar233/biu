@@ -1,7 +1,7 @@
 import { memo, useMemo, type ReactNode } from "react";
 
 import { Link } from "@heroui/react";
-import { RiPlayFill, RiUserLine, RiYoutubeLine } from "@remixicon/react";
+import { RiUserLine, RiYoutubeLine } from "@remixicon/react";
 
 import { formatNumber } from "@/common/utils/number";
 import { formatDuration, formatSecondsToDate } from "@/common/utils/time";
@@ -30,11 +30,11 @@ const MusicCard = memo(
     }, [duration]);
 
     return (
-      <div onClick={onPress} className="rounded-medium flex h-full w-full cursor-pointer flex-col">
-        <ContextMenu items={menus} onAction={onMenuAction} className="grow">
-          <div className="group flex h-full grow flex-col">
-            <div className="rounded-medium relative overflow-hidden">
-              <Image radius="md" removeWrapper src={cover} width="100%" height={140} params="672w_378h_1c.avif" />
+      <div onClick={onPress} className="group rounded-medium flex w-full cursor-pointer flex-col">
+        <ContextMenu items={menus} onAction={onMenuAction}>
+          <div className="flex flex-col">
+            <div className="rounded-medium relative aspect-video overflow-hidden transition-transform duration-300 ease-out group-hover:scale-[1.03]">
+              <Image radius="md" removeWrapper src={cover} width="100%" height="100%" params="672w_378h_1c.avif" />
               {(playCount ?? 0) > 0 || durationText ? (
                 <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 flex items-center justify-between bg-linear-to-t from-black/90 via-black/60 to-transparent p-2 text-xs text-white">
                   {(playCount ?? 0) > 0 && (
@@ -46,17 +46,10 @@ const MusicCard = memo(
                   {durationText && <span className="tabular-nums">{durationText}</span>}
                 </div>
               ) : null}
-              {typeof onPress === "function" && (
-                <div className="pointer-events-none absolute right-2 bottom-8 z-40 opacity-0 transition-opacity duration-200 ease-out group-hover:opacity-100">
-                  <div className="bg-primary rounded-full shadow-2xl">
-                    <div className="flex h-10 w-10 items-center justify-center">
-                      <RiPlayFill className="text-black" size={26} />
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
-            <div className="mt-2 line-clamp-2 w-full overflow-hidden wrap-break-word text-ellipsis">{title}</div>
+            <div className="group-hover:text-primary mt-2 line-clamp-2 w-full overflow-hidden wrap-break-word text-ellipsis transition-colors">
+              {title}
+            </div>
           </div>
         </ContextMenu>
         {ownerName && (
@@ -75,7 +68,7 @@ const MusicCard = memo(
                 <span className="truncate">{ownerName}</span>
               </span>
             )}
-            {time && <span className="text-tiny shrink-0">{formatSecondsToDate(time)}</span>}
+            {time && <span className="text-tiny text-foreground-500 shrink-0">{formatSecondsToDate(time)}</span>}
           </div>
         )}
       </div>

@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 
-import { Popover, PopoverContent, PopoverTrigger, Slider } from "@heroui/react";
-import { RiTimeLine } from "@remixicon/react";
+import { Button, Popover, PopoverContent, PopoverTrigger } from "@heroui/react";
+import { RiAddLine, RiSubtractLine, RiTimeLine } from "@remixicon/react";
 
 import IconButton from "../icon-button";
 
@@ -17,7 +17,6 @@ const formatLabel = (ms: number) => (ms >= 0 ? `+${ms}` : `${ms}`);
 
 const OffsetControl = ({ value, min = -5000, max = 5000, onChange, onOpenChange }: OffsetControlProps) => {
   const [open, setOpen] = useState(false);
-  const step = 50;
 
   const handleOpenChange = useCallback(
     (next: boolean) => {
@@ -26,6 +25,8 @@ const OffsetControl = ({ value, min = -5000, max = 5000, onChange, onOpenChange 
     },
     [onOpenChange],
   );
+
+  const step = 100;
 
   return (
     <Popover
@@ -47,25 +48,33 @@ const OffsetControl = ({ value, min = -5000, max = 5000, onChange, onOpenChange 
           <RiTimeLine size={16} />
         </IconButton>
       </PopoverTrigger>
-      <PopoverContent className="px-3 py-2">
-        <div className="flex flex-col items-center gap-2">
-          <Slider
-            aria-label="调整歌词偏移"
-            minValue={min}
-            maxValue={max}
-            step={step}
-            value={value}
-            onChange={v => onChange(v as number)}
+      <PopoverContent className="px-1 py-1">
+        <div className="bg-foreground/10 flex items-center gap-1 rounded-lg p-1">
+          <Button
+            isIconOnly
             size="sm"
-            color="primary"
-            orientation="vertical"
-            className="h-32"
-            classNames={{
-              track: "w-1",
-              thumb: "after:hidden",
-            }}
-          />
-          <span className="text-foreground/60 text-[10px] font-bold whitespace-nowrap">{formatLabel(value)} ms</span>
+            variant="light"
+            radius="sm"
+            isDisabled={value <= min}
+            onPress={() => onChange(Math.max(min, value - step))}
+            className="text-foreground/70 hover:text-foreground h-7 w-7 min-w-0"
+          >
+            <RiSubtractLine size={14} />
+          </Button>
+          <span className="text-foreground/80 min-w-[44px] text-center text-xs font-medium tabular-nums select-none">
+            {formatLabel(value)}ms
+          </span>
+          <Button
+            isIconOnly
+            size="sm"
+            variant="light"
+            radius="sm"
+            isDisabled={value >= max}
+            onPress={() => onChange(Math.min(max, value + step))}
+            className="text-foreground/70 hover:text-foreground h-7 w-7 min-w-0"
+          >
+            <RiAddLine size={14} />
+          </Button>
         </div>
       </PopoverContent>
     </Popover>

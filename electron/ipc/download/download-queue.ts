@@ -64,6 +64,7 @@ export class DownloadQueue {
       outputFileType: mediaInfo.outputFileType,
       title: mediaInfo.title,
       cover: mediaInfo.cover,
+      duration: mediaInfo.duration,
       bvid: mediaInfo.bvid,
       cid: mediaInfo.cid,
       sid: mediaInfo.sid,
@@ -98,6 +99,7 @@ export class DownloadQueue {
               cid: page.cid,
               title: page.title,
               cover: page.cover,
+              duration: page.duration,
             }),
           );
           await this.cancelTask(core.id);
@@ -194,6 +196,7 @@ export class DownloadQueue {
       id: core.id,
       outputFileType: core.outputFileType,
       title: core.title!,
+      duration: core.duration,
       bvid: core.bvid,
       cid: core.cid,
       sid: core.sid,
@@ -234,6 +237,7 @@ export class DownloadQueue {
         outputFileType: core.outputFileType,
         title: core.title,
         cover: core.cover,
+        duration: core.duration,
         createdTime: core.createdTime,
         bvid: core.bvid,
         cid: core.cid,

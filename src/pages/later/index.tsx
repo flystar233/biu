@@ -166,6 +166,7 @@ const Later = () => {
           outputFileType: "audio",
           title: item.title,
           cover: item.pic,
+          duration: item.duration,
           bvid: item.bvid,
           cid: item.cid,
         });
@@ -179,6 +180,7 @@ const Later = () => {
           outputFileType: "video",
           title: item.title,
           cover: item.pic,
+          duration: item.duration,
           bvid: item.bvid,
           cid: item.cid,
         });

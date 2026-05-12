@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { addToast, Spinner, Switch } from "@heroui/react";
+import { addToast, Spinner } from "@heroui/react";
 import { RiDeleteBinLine } from "@remixicon/react";
-import { useShallow } from "zustand/react/shallow";
 
 import IconButton from "@/components/icon-button";
 import ScrollContainer, { type ScrollRefObject } from "@/components/scroll-container";
@@ -32,13 +31,6 @@ const History = () => {
   const dateRangeRef = useRef<{ start?: number; end?: number } | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const displayMode = useSettings(state => state.displayMode);
-  const { reportPlayHistory, updateSettings } = useSettings(
-    useShallow(state => ({
-      reportPlayHistory: state.reportPlayHistory,
-      updateSettings: state.update,
-    })),
-  );
-
   // 加载历史记录（只负责请求和数据合并，loading 状态由调用方管理）
   const fetchHistory = useCallback(async () => {
     try {
@@ -190,6 +182,7 @@ const History = () => {
           outputFileType: "audio",
           title: item.title,
           cover: item.cover,
+          duration: item.duration,
           bvid: item.history.bvid,
           cid: item.history.cid,
         });
@@ -203,6 +196,7 @@ const History = () => {
           outputFileType: "video",
           title: item.title,
           cover: item.cover,
+          duration: item.duration,
           bvid: item.history.bvid,
           cid: item.history.cid,
         });
@@ -259,15 +253,6 @@ const History = () => {
         <div className="flex items-center justify-between">
           <h1>历史记录</h1>
           <div className="flex items-center justify-end space-x-2">
-            <Switch
-              size="sm"
-              isSelected={reportPlayHistory}
-              onValueChange={isSelected => {
-                updateSettings({ reportPlayHistory: isSelected });
-              }}
-            >
-              记录播放历史
-            </Switch>
             <IconButton variant="flat" size="sm" onPress={handleClear}>
               <RiDeleteBinLine size={18} />
             </IconButton>

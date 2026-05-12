@@ -33,14 +33,21 @@ export const useUser = create<UserState & Action>()(
     }),
     {
       name: "user",
-      partialize: state => state.user,
+      partialize: state => ({ user: state.user }),
       storage: {
         getItem: async () => {
           const store = await window.electron.getStore(StoreNameMap.UserLoginInfo);
 
-          return {
-            state: store,
-          };
+          if (!store) {
+            return { state: { user: null } };
+          }
+
+          // 兼容旧格式：raw user object → { user: ... }
+          if (!("user" in store)) {
+            return { state: { user: store } };
+          }
+
+          return { state: store };
         },
 
         setItem: async (_, value) => {

@@ -14,6 +14,9 @@ export interface VirtualGridPageListProps<T> {
   getScrollElement: () => HTMLElement | null;
   className?: string;
   rowHeight?: number;
+  columnFactor?: number;
+  gap?: number;
+  columnGap?: number;
   onLoadMore?: () => void;
   hasMore?: boolean;
   loading: boolean;
@@ -28,6 +31,9 @@ const VirtualGridPageList = <T,>({
   getScrollElement,
   className,
   rowHeight = 220,
+  columnFactor = 1,
+  gap = ROW_GAP,
+  columnGap = gap,
   onLoadMore,
   hasMore,
   loading,
@@ -41,11 +47,9 @@ const VirtualGridPageList = <T,>({
   const hasMoreRef = useRef(hasMore);
   const loadingRef = useRef(loading);
   const observerRef = useRef<IntersectionObserver | null>(null);
-  const isInitialMountRef = useRef(true);
   const lastTriggerTimeRef = useRef(0);
-  const pendingLoadMoreRef = useRef(false);
-  const lastIsIntersectingRef = useRef(false);
-  const DEBOUNCE_DELAY = 300; // 防抖延迟 300ms
+  const DEBOUNCE_DELAY = 300;
+  const measureElement = useCallback((el: HTMLElement) => el.getBoundingClientRect().height, []);
   const width = size?.width || initialWidthRef.current || 0;
 
   useLayoutEffect(() => {
@@ -55,13 +59,9 @@ const VirtualGridPageList = <T,>({
   }, []);
 
   const columns = useMemo(() => {
-    if (!width) return 2;
-    if (width >= 1536) return 6;
-    if (width >= 1280) return 5;
-    if (width >= 1024) return 4;
-    if (width >= 768) return 3;
-    return 2;
-  }, [width]);
+    const base = !width ? 2 : width >= 1536 ? 6 : width >= 1280 ? 5 : width >= 1024 ? 4 : width >= 768 ? 3 : 2;
+    return base * columnFactor;
+  }, [width, columnFactor]);
 
   const rows = useMemo(() => {
     const result: T[][] = [];
@@ -74,37 +74,38 @@ const VirtualGridPageList = <T,>({
   const rowVirtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement,
-    estimateSize: () => rowHeight + ROW_GAP,
+    estimateSize: () => rowHeight + gap,
+    measureElement,
     overscan: 5,
   });
 
-  // 统一更新所有 ref，减少 useEffect 数量
+  const prevLoadingRef = useRef(loading);
   useEffect(() => {
     loadMoreRef.current = onLoadMore;
     getRootRef.current = getScrollElement;
     hasMoreRef.current = hasMore;
     loadingRef.current = loading;
+    // loading 从 true → false 时重置防抖计时，确保 sentinel 仍可见时能立即触发下一次加载
+    if (prevLoadingRef.current && !loading) {
+      lastTriggerTimeRef.current = 0;
+    }
+    prevLoadingRef.current = loading;
   }, [onLoadMore, getScrollElement, hasMore, loading]);
 
-  // 处理加载更多的回调，添加防抖
   const handleIntersection = useCallback((entries: IntersectionObserverEntry[]) => {
     const now = Date.now();
-    entries.forEach(entry => {
-      lastIsIntersectingRef.current = entry.isIntersecting;
+    for (const entry of entries) {
       if (
         entry.isIntersecting &&
-        !isInitialMountRef.current &&
         hasMoreRef.current &&
+        !loadingRef.current &&
         now - lastTriggerTimeRef.current > DEBOUNCE_DELAY
       ) {
         lastTriggerTimeRef.current = now;
-        if (loadingRef.current) {
-          pendingLoadMoreRef.current = true;
-          return;
-        }
         loadMoreRef.current?.();
+        return;
       }
-    });
+    }
   }, []);
 
   // 使用 useLayoutEffect 确保 DOM 更新后再设置 observer
@@ -136,26 +137,6 @@ const VirtualGridPageList = <T,>({
     };
   }, [handleIntersection, width, rows.length]);
 
-  // 标记初始挂载完成 - 使用 requestAnimationFrame 更可靠
-  useEffect(() => {
-    const rafId = requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        isInitialMountRef.current = false;
-      });
-    });
-
-    return () => {
-      cancelAnimationFrame(rafId);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!loading && pendingLoadMoreRef.current && hasMore && lastIsIntersectingRef.current) {
-      pendingLoadMoreRef.current = false;
-      loadMoreRef.current?.();
-    }
-  }, [loading, hasMore]);
-
   if (!items.length && !loading) {
     return <Empty className="min-h-20" />;
   }
@@ -176,17 +157,19 @@ const VirtualGridPageList = <T,>({
           return (
             <div
               key={virtualRow.key}
+              ref={rowVirtualizer.measureElement}
               data-index={virtualRow.index}
               style={{
                 position: "absolute",
                 top: 0,
                 left: 0,
                 width: "100%",
-                height: virtualRow.size - ROW_GAP,
+                minHeight: virtualRow.size - gap,
                 transform: `translate3d(0, ${virtualRow.start}px, 0)`,
+                paddingBottom: `${gap}px`,
                 display: "grid",
                 gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
-                gap: `${ROW_GAP}px`,
+                columnGap: `${columnGap}px`,
               }}
             >
               {rowItems.map((item, colIndex) => {

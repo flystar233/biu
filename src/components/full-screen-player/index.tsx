@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { Drawer, DrawerBody, DrawerContent, Image, Popover, PopoverContent, PopoverTrigger } from "@heroui/react";
-import { RiArrowDownSLine, RiArrowLeftSLine, RiSettings3Line } from "@remixicon/react";
+import { Drawer, DrawerBody, DrawerContent, Image } from "@heroui/react";
+import { RiArrowDownSLine, RiArrowLeftSLine } from "@remixicon/react";
 import { useClickAway } from "ahooks";
 import clsx from "classnames";
 import { readableColor } from "color2k";
@@ -11,7 +11,6 @@ import { Themes } from "@/common/constants/theme";
 import { hexToHsl, resolveTheme, isHex } from "@/common/utils/color";
 import AudioWaveform from "@/components/audio-waveform";
 import Lyrics from "@/components/lyrics";
-import { useFullScreenPlayerSettings } from "@/store/full-screen-player-settings";
 import { useModalStore } from "@/store/modal";
 import { usePlayList } from "@/store/play-list";
 import { useSettings } from "@/store/settings";
@@ -25,7 +24,6 @@ import OpenPlaylistDrawerButton from "../open-playlist-drawer-button";
 import WindowAction from "../window-action";
 import { useGlassmorphism } from "./glassmorphism";
 import PageList from "./page-list";
-import FullScreenPlayerSettingsPanel from "./settings-panel";
 
 const platform = window.electron.getPlatform();
 
@@ -38,20 +36,27 @@ const FullScreenPlayer = () => {
       list: state.list,
     })),
   );
-  const primaryColor = useSettings(s => s.primaryColor);
-  const themeMode = useSettings(s => s.themeMode);
-  const { showLyrics, showSpectrum, showCover, showBlurredBackground, backgroundColor, spectrumColor, lyricsColor } =
-    useFullScreenPlayerSettings(
-      useShallow(s => ({
-        showLyrics: s.showLyrics,
-        showSpectrum: s.showSpectrum,
-        showCover: s.showCover,
-        showBlurredBackground: s.showBlurredBackground,
-        backgroundColor: s.backgroundColor,
-        spectrumColor: s.spectrumColor,
-        lyricsColor: s.lyricsColor,
-      })),
-    );
+  const {
+    primaryColor,
+    themeMode,
+    showLyrics,
+    showSpectrum,
+    showCover,
+    showBlurredBackground,
+    fullScreenBackgroundColor,
+    lyricsColor,
+  } = useSettings(
+    useShallow(s => ({
+      primaryColor: s.primaryColor,
+      themeMode: s.themeMode,
+      showLyrics: s.showLyrics,
+      showSpectrum: s.showSpectrum,
+      showCover: s.showCover,
+      showBlurredBackground: s.showBlurredBackground,
+      fullScreenBackgroundColor: s.fullScreenBackgroundColor,
+      lyricsColor: s.lyricsColor,
+    })),
+  );
   const playItem = list.find(item => item.id === playId);
   const isLocal = playItem?.source === "local";
 
@@ -59,11 +64,12 @@ const FullScreenPlayer = () => {
   const [windowHeight, setWindowHeight] = useState(typeof window !== "undefined" ? window.innerHeight : 800);
   const [isPageListOpen, setIsPageListOpen] = useState(false);
   const [isUiVisible, setIsUiVisible] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const controlsRef = useRef<HTMLDivElement>(null);
   const [controlsHeight, setControlsHeight] = useState(80);
 
   const pageListRef = useRef<HTMLDivElement>(null);
+  const waveformContainerRef = useRef<HTMLDivElement>(null);
+  const [waveformWidth, setWaveformWidth] = useState(640);
   const hideUiTimeoutRef = useRef<number | null>(null);
 
   useClickAway(() => {
@@ -88,6 +94,21 @@ const FullScreenPlayer = () => {
   }, [isOpen]);
 
   useEffect(() => {
+    const el = waveformContainerRef.current;
+    if (!el) return;
+
+    const observer = new ResizeObserver(entries => {
+      const rect = entries[0]?.contentRect;
+      if (rect?.width) {
+        setWaveformWidth(Math.floor(rect.width));
+      }
+    });
+    observer.observe(el);
+
+    return () => observer.disconnect();
+  }, [isOpen]);
+
+  useEffect(() => {
     return () => {
       if (hideUiTimeoutRef.current) {
         window.clearTimeout(hideUiTimeoutRef.current);
@@ -102,12 +123,6 @@ const FullScreenPlayer = () => {
     }
   }, [isOpen]);
 
-  useEffect(() => {
-    if (!isUiVisible && isSettingsOpen) {
-      setIsSettingsOpen(false);
-    }
-  }, [isUiVisible, isSettingsOpen]);
-
   const handleMouseEnter = () => {
     if (hideUiTimeoutRef.current) {
       window.clearTimeout(hideUiTimeoutRef.current);
@@ -119,7 +134,6 @@ const FullScreenPlayer = () => {
   };
 
   const scheduleHideUi = (delay: number) => {
-    if (isSettingsOpen) return;
     if (hideUiTimeoutRef.current) {
       window.clearTimeout(hideUiTimeoutRef.current);
     }
@@ -161,13 +175,15 @@ const FullScreenPlayer = () => {
   const computedForegroundHex = useMemo(() => {
     if (showBlurredBackground) return undefined;
     const baseBg =
-      backgroundColor && isHex(backgroundColor) ? backgroundColor : Themes[resolveTheme(themeMode)].colors!.background;
+      fullScreenBackgroundColor && isHex(fullScreenBackgroundColor)
+        ? fullScreenBackgroundColor
+        : Themes[resolveTheme(themeMode)].colors!.background;
     try {
       return readableColor(baseBg as string);
     } catch {
       return undefined;
     }
-  }, [backgroundColor, themeMode, showBlurredBackground]);
+  }, [fullScreenBackgroundColor, themeMode, showBlurredBackground]);
 
   const themeVars = useMemo(() => {
     const vars: React.CSSProperties = {
@@ -182,12 +198,12 @@ const FullScreenPlayer = () => {
 
   const appTheme = useMemo(() => resolveTheme(themeMode), [themeMode]);
 
+  const waveformBarCount = useMemo(() => Math.max(64, Math.min(256, Math.round(waveformWidth / 7))), [waveformWidth]);
+
   if (!playItem) return null;
 
   const coverWidth = Math.max(260, Math.min(windowWidth * 0.7, windowHeight * 0.48, 520));
   const coverHeight = coverWidth * 0.75;
-  const waveformWidth = Math.min(640, Math.max(400, Math.round(windowWidth * 0.5)));
-  const waveformBarCount = Math.max(48, Math.min(128, Math.round(waveformWidth / 7.5)));
 
   return (
     <Drawer
@@ -225,7 +241,11 @@ const FullScreenPlayer = () => {
               }}
             >
               {!showBlurredBackground && (
-                <div aria-hidden className="absolute inset-0 -z-10" style={{ backgroundColor: backgroundColor }} />
+                <div
+                  aria-hidden
+                  className="absolute inset-0 -z-10"
+                  style={{ backgroundColor: fullScreenBackgroundColor }}
+                />
               )}
               {showBlurredBackground && (
                 <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
@@ -295,34 +315,25 @@ const FullScreenPlayer = () => {
                     <RiArrowDownSLine size={28} />
                   </IconButton>
                   <h2 className="truncate text-xl select-none">{playItem.pageTitle || playItem.title}</h2>
-                  <Popover
-                    isOpen={isSettingsOpen && isUiVisible}
-                    onOpenChange={open => {
-                      setIsSettingsOpen(open);
-                      if (open) {
-                        if (hideUiTimeoutRef.current) {
-                          window.clearTimeout(hideUiTimeoutRef.current);
-                          hideUiTimeoutRef.current = null;
-                        }
-                        setIsUiVisible(true);
-                      }
-                    }}
-                    placement="bottom-start"
-                  >
-                    <PopoverTrigger>
-                      <IconButton title="设置" tooltip="设置">
-                        <RiSettings3Line size={22} />
-                      </IconButton>
-                    </PopoverTrigger>
-                    <PopoverContent className="p-4">
-                      <FullScreenPlayerSettingsPanel isUiVisible={isUiVisible} />
-                    </PopoverContent>
-                  </Popover>
                 </div>
                 <div className="window-no-drag top-0 right-0">
                   {platform === "linux" || platform === "windows" ? <WindowAction /> : null}
                 </div>
               </div>
+
+              {showSpectrum && (
+                <div
+                  className="pointer-events-none absolute inset-x-0 z-0 flex w-full justify-center"
+                  style={{
+                    bottom: isUiVisible ? controlsHeight + 12 : 24,
+                    transition: "bottom 300ms ease",
+                  }}
+                >
+                  <div ref={waveformContainerRef} className="mx-auto flex w-full max-w-6xl justify-center px-12">
+                    <AudioWaveform width={waveformWidth} height={40} barCount={waveformBarCount} barColor="#595959" />
+                  </div>
+                </div>
+              )}
 
               <div className="flex h-full w-full items-center justify-center">
                 {!isLocal && showCover && (
@@ -362,25 +373,6 @@ const FullScreenPlayer = () => {
                   </div>
                 )}
               </div>
-
-              {showSpectrum && (
-                <div
-                  className="pointer-events-none absolute inset-x-0 z-30 flex w-full justify-center"
-                  style={{
-                    bottom: isUiVisible ? controlsHeight + 12 : 24,
-                    transition: "bottom 300ms ease",
-                  }}
-                >
-                  <div className="mx-auto flex w-full max-w-6xl justify-center px-12">
-                    <AudioWaveform
-                      width={waveformWidth}
-                      height={40}
-                      barCount={waveformBarCount}
-                      barColor={spectrumColor || "currentColor"}
-                    />
-                  </div>
-                </div>
-              )}
 
               <div
                 ref={controlsRef}

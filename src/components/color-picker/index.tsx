@@ -18,8 +18,20 @@ export interface ColorPickerProps {
   onOpenChange?: (open: boolean) => void;
 }
 
-const ColorPicker: React.FC<ColorPickerProps> = ({ presets, value, onChange, children, isOpen, onOpenChange }) => {
+const ColorPicker: React.FC<ColorPickerProps> = ({
+  presets,
+  value,
+  onChange,
+  children,
+  isOpen: controlledIsOpen,
+  onOpenChange: controlledOnOpenChange,
+}) => {
+  const [internalIsOpen, setInternalIsOpen] = useState(false);
   const [hexInput, setHexInput] = useState(value?.replace("#", "") || "");
+
+  const isControlled = controlledIsOpen !== undefined;
+  const isOpen = isControlled ? controlledIsOpen : internalIsOpen;
+  const handleOpenChange = (isControlled ? controlledOnOpenChange : setInternalIsOpen) as (open: boolean) => void;
 
   useEffect(() => {
     setHexInput(value?.replace("#", "") || "");
@@ -36,16 +48,18 @@ const ColorPicker: React.FC<ColorPickerProps> = ({ presets, value, onChange, chi
   };
 
   return (
-    <Popover radius="md" placement="bottom-start" offset={8} isOpen={isOpen} onOpenChange={onOpenChange}>
+    <Popover radius="md" placement="bottom-start" offset={8} isOpen={isOpen} onOpenChange={handleOpenChange}>
       <PopoverTrigger>{children}</PopoverTrigger>
       <PopoverContent className="bg-content2 w-64 p-2">
-        <HexColorPicker color={value} onChange={handleChange} style={{ width: "100%" }} />
+        <HexColorPicker color={value} onChange={handleChange} className="!w-full" />
         {Boolean(presets) && (
           <div className="mt-2 flex w-full flex-wrap gap-2">
             {presets?.map(preset => (
               <button
                 type="button"
                 key={preset}
+                aria-label={`选择颜色 ${preset}`}
+                title={preset}
                 style={{ backgroundColor: preset }}
                 className="rounded-medium border-default h-6 w-6 cursor-pointer border"
                 onClick={() => {

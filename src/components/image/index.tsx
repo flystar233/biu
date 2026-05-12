@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Image as HeroImage, type ImageProps } from "@heroui/react";
 import { RiFileImageLine } from "@remixicon/react";
@@ -13,6 +13,13 @@ interface Props extends ImageProps {
 
 const Image = ({ params, width, height, src, className, emptyPlaceholder, ...rest }: Props) => {
   const [isError, setIsError] = useState(false);
+  const srcRef = useRef(src);
+  useEffect(() => {
+    if (srcRef.current !== src) {
+      srcRef.current = src;
+      setIsError(false);
+    }
+  }, [src]);
   const formatSrc = formatUrlProtocol(src);
   const finalSrc =
     params && formatSrc && formatSrc.includes("/bfs/") && !formatSrc.includes("@")

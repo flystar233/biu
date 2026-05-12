@@ -1042,6 +1042,10 @@ function resetAudioAndPlay(url: string) {
 // 切换歌曲时，更新当前播放的歌曲信息
 usePlayList.subscribe(async (state, prevState) => {
   if (state.playId !== prevState.playId) {
+    // 切歌时清零播放进度（冷启动首次设置 playId 不清零，以保留续播时间）
+    if (prevState.playId) {
+      usePlayProgress.setState({ currentTime: 0 });
+    }
     if (!state.playId) {
       const prevPlayItem = prevState.list.find(item => item.id === prevState.playId);
       if (shouldReportPlayRecord(prevPlayItem)) {

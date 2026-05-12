@@ -1,32 +1,25 @@
 import { useEffect, useState } from "react";
 
-import {
-  Button,
-  Card,
-  CardBody,
-  Chip,
-  Table,
-  TableBody,
-  TableCell,
-  TableColumn,
-  TableHeader,
-  Radio,
-  RadioGroup,
-  TableRow,
-  Tooltip,
-} from "@heroui/react";
+import { addToast, Button } from "@heroui/react";
 import { RiDeleteBinLine, RiExternalLinkLine, RiFolderLine } from "@remixicon/react";
 import { filesize } from "filesize";
 
-import { formatMillisecond } from "@/common/utils/time";
-import { openBiliVideoLink } from "@/common/utils/url";
+import { formatDuration, formatMillisecond } from "@/common/utils/time";
+import { getBiliVideoLink } from "@/common/utils/url";
 import Empty from "@/components/empty";
 import Image from "@/components/image";
 import ScrollContainer from "@/components/scroll-container";
+import { usePlayList } from "@/store/play-list";
 import { useSettings } from "@/store/settings";
 
 import DownloadActions from "./actions";
 import DownloadProgress from "./progress";
+
+const FILE_TYPE_OPTIONS = [
+  { key: "all", label: "全部" },
+  { key: "audio", label: "音频" },
+  { key: "video", label: "视频" },
+] as const;
 
 const DownloadList = () => {
   const downloadPath = useSettings(s => s.downloadPath);
@@ -76,130 +69,152 @@ const DownloadList = () => {
         ? `${item.videoResolution}${item.videoFrameRate ? `@${item.videoFrameRate}` : ""}`
         : "";
     }
-
-    if (item.audioCodecs === "flac") {
-      return "flac";
-    }
-
-    if (item.audioCodecs?.includes("ec-3")) {
-      return "杜比音频";
-    }
-
-    if (item.audioBandwidth) {
-      return `${Math.round(item.audioBandwidth / 1000)} kbps`;
-    }
-
+    if (item.audioCodecs === "flac") return "flac";
+    if (item.audioCodecs?.includes("ec-3")) return "杜比音频";
+    if (item.audioBandwidth) return `${Math.round(item.audioBandwidth / 1000)} kbps`;
     return "";
   };
+
+  const filteredList = downloadList
+    .filter(item => fileType === "all" || item.outputFileType === fileType)
+    .sort((a, b) => (b.createdTime || 0) - (a.createdTime || 0));
 
   return (
     <ScrollContainer enableBackToTop className="h-full w-full px-4">
       <div className="mb-2 flex items-center justify-between">
         <h1 className="flex items-center space-x-1">下载记录</h1>
         <div className="flex items-center space-x-1">
-          <Button variant="flat" onPress={openDownloadDir} startContent={<RiFolderLine size={18} />}>
+          <Button variant="flat" size="sm" onPress={openDownloadDir} startContent={<RiFolderLine size={18} />}>
             {downloadPath}
           </Button>
         </div>
       </div>
-      <Card radius="md" shadow="sm">
-        <CardBody>
-          <div className="w-full overflow-x-auto">
-            <Table
-              fullWidth
-              radius="md"
-              aria-label="下载列表"
-              removeWrapper
-              topContent={
-                <div className="flex justify-between">
-                  <RadioGroup
-                    orientation="horizontal"
-                    value={fileType}
-                    onValueChange={setFileType}
-                    classNames={{
-                      wrapper: "gap-4",
-                    }}
-                  >
-                    <Radio value="all">全部</Radio>
-                    <Radio value="audio">音频</Radio>
-                    <Radio value="video">视频</Radio>
-                  </RadioGroup>
-                  {Boolean(downloadList.length) && (
-                    <Tooltip content="清空记录" closeDelay={0}>
-                      <Button size="sm" isIconOnly onPress={clearDownloadList}>
-                        <RiDeleteBinLine size={18} />
-                      </Button>
-                    </Tooltip>
-                  )}
-                </div>
-              }
-              classNames={{
-                th: "first:rounded-s-medium last:rounded-e-medium",
-              }}
-            >
-              <TableHeader className="rounded-medium">
-                <TableColumn width={350}>文件</TableColumn>
-                <TableColumn align="center">状态</TableColumn>
-                <TableColumn width={120} align="center">
-                  大小
-                </TableColumn>
-                <TableColumn width={120} align="center">
-                  下载时间
-                </TableColumn>
-                <TableColumn width={120} align="center">
-                  操作
-                </TableColumn>
-              </TableHeader>
-              <TableBody
-                items={downloadList.filter(item => fileType === "all" || item.outputFileType === fileType)}
-                emptyContent={<Empty />}
-              >
-                {item => {
-                  const quality = getFileQuality(item);
 
-                  return (
-                    <TableRow key={item.id}>
-                      <TableCell className="max-w-[280px] truncate">
-                        <div className="flex items-center space-x-2">
-                          <Image radius="md" src={item.cover} width={48} height={48} className="mr-2 object-cover" />
-                          <div className="flex min-w-0 flex-1 flex-col items-start space-y-1 overflow-hidden">
-                            <div
-                              className="group flex max-w-full min-w-0 cursor-pointer items-center space-x-1 hover:underline"
-                              onClick={() =>
-                                openBiliVideoLink({
-                                  type: item.sid ? "audio" : "mv",
-                                  bvid: item.bvid,
-                                  sid: item.sid,
-                                })
-                              }
-                            >
-                              <span className="min-w-0 flex-auto truncate">{item.title}</span>
-                              <RiExternalLinkLine className="w-0 flex-none group-hover:w-[16px]" />
-                            </div>
-                            {Boolean(quality) && (
-                              <Chip size="sm" radius="sm" variant="flat">
-                                {quality}
-                              </Chip>
-                            )}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <DownloadProgress data={item} />
-                      </TableCell>
-                      <TableCell>{item.totalBytes ? filesize(item.totalBytes) : "-"}</TableCell>
-                      <TableCell>{item.createdTime ? formatMillisecond(item.createdTime) : "-"}</TableCell>
-                      <TableCell>
-                        <DownloadActions data={item} />
-                      </TableCell>
-                    </TableRow>
-                  );
-                }}
-              </TableBody>
-            </Table>
+      <div className="mb-3 flex items-center justify-between">
+        <div className="bg-default-100 flex items-center gap-1 rounded-lg p-0.5">
+          {FILE_TYPE_OPTIONS.map(opt => (
+            <button
+              key={opt.key}
+              type="button"
+              onClick={() => setFileType(opt.key)}
+              className={`rounded-md px-3 py-1 text-sm font-medium transition-colors ${
+                fileType === opt.key
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-foreground-500 hover:text-foreground"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+        {Boolean(downloadList.length) && (
+          <Button
+            size="sm"
+            variant="light"
+            color="danger"
+            onPress={clearDownloadList}
+            startContent={<RiDeleteBinLine size={16} />}
+          >
+            清空记录
+          </Button>
+        )}
+      </div>
+
+      {!filteredList.length ? (
+        <Empty />
+      ) : (
+        <>
+          <div className="text-foreground-500 grid w-full grid-cols-[32px_minmax(0,1fr)_140px_80px_64px_80px_100px_40px] items-center gap-4 rounded-md px-2 py-1 text-xs">
+            <div className="text-center">#</div>
+            <div>文件</div>
+            <div className="text-center">状态</div>
+            <div className="text-center">码率</div>
+            <div className="text-center">时长</div>
+            <div className="text-right">大小</div>
+            <div className="text-right">下载时间</div>
+            <div />
           </div>
-        </CardBody>
-      </Card>
+
+          <div className="flex flex-col">
+            {filteredList.map((item, index) => {
+              const quality = getFileQuality(item);
+
+              const toFileUrl = (p: string) => `file://${p.replace(/\\/g, "/")}`;
+
+              return (
+                <div
+                  key={item.id}
+                  className="hover:bg-content2 grid w-full grid-cols-[32px_minmax(0,1fr)_140px_80px_64px_80px_100px_40px] items-center gap-4 rounded-md px-2 py-1.5 transition-colors"
+                  onDoubleClick={() => {
+                    if (item.status === "completed" && item.savePath) {
+                      usePlayList.getState().play({
+                        type: item.sid ? "audio" : "mv",
+                        source: "local" as const,
+                        id: item.id,
+                        title: item.title,
+                        audioUrl: toFileUrl(item.savePath),
+                      });
+                    }
+                  }}
+                >
+                  <div className="text-foreground-500 text-center text-xs tabular-nums">{index + 1}</div>
+
+                  <div className="flex min-w-0 items-center gap-2">
+                    <div className="h-9 w-9 shrink-0 overflow-hidden rounded-md">
+                      <Image
+                        removeWrapper
+                        radius="md"
+                        src={item.cover}
+                        width={36}
+                        height={36}
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      className="group flex min-w-0 cursor-pointer items-center gap-1 hover:underline"
+                      onClick={async () => {
+                        const link = getBiliVideoLink({
+                          type: item.sid ? "audio" : "mv",
+                          bvid: item.bvid,
+                          sid: item.sid,
+                        });
+                        await navigator.clipboard.writeText(link);
+                        addToast({ title: "链接已复制", color: "success" });
+                      }}
+                    >
+                      <span className="truncate text-sm">{item.title}</span>
+                      <RiExternalLinkLine className="hidden w-0 flex-none group-hover:inline-block group-hover:w-3.5" />
+                    </button>
+                  </div>
+
+                  <div className="flex justify-center">
+                    <DownloadProgress data={item} />
+                  </div>
+
+                  <div className="text-foreground-500 text-center text-xs tabular-nums">{quality || "-"}</div>
+
+                  <div className="text-foreground-500 text-center text-xs tabular-nums">
+                    {item.duration ? formatDuration(item.duration) : "-"}
+                  </div>
+
+                  <div className="text-foreground-500 text-right text-xs tabular-nums">
+                    {item.totalBytes ? filesize(item.totalBytes) : "-"}
+                  </div>
+
+                  <div className="text-foreground-500 text-right text-xs">
+                    {item.createdTime ? formatMillisecond(item.createdTime) : "-"}
+                  </div>
+
+                  <div className="flex justify-end">
+                    <DownloadActions data={item} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
     </ScrollContainer>
   );
 };
