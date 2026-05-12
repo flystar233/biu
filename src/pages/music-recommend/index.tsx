@@ -42,9 +42,9 @@ const normalizeRankItem = (item: MusicItem): RecommendItem => {
 
 const MusicRecommend = () => {
   const sentinelRef = useRef<HTMLDivElement>(null);
-  const wrapperRef = useRef<HTMLDivElement>(null);
-  const wrapperSize = useSize(wrapperRef);
-  const containerWidth = wrapperSize?.width || 0;
+  const contentRef = useRef<HTMLDivElement>(null);
+  const contentSize = useSize(contentRef);
+  const contentWidth = contentSize?.width || 0;
 
   const [list, setList] = useState<RecommendItem[]>([]);
   const [, setHasMore] = useState(false);
@@ -56,13 +56,13 @@ const MusicRecommend = () => {
   const hasMoreRef = useRef(false);
 
   const columns = useMemo(() => {
-    if (!containerWidth) return 2;
-    if (containerWidth >= 1536) return 6;
-    if (containerWidth >= 1280) return 5;
-    if (containerWidth >= 1024) return 4;
-    if (containerWidth >= 768) return 3;
+    if (!contentWidth) return 2;
+    if (contentWidth >= 1536) return 6;
+    if (contentWidth >= 1280) return 5;
+    if (contentWidth >= 1024) return 4;
+    if (contentWidth >= 768) return 3;
     return 2;
-  }, [containerWidth]);
+  }, [contentWidth]);
 
   const fetchPage = useCallback(async (pn: number = 1) => {
     const res = await getMusicComprehensiveWebRank({ pn, ps: PAGE_SIZE, web_location: "333.1351" });
@@ -162,8 +162,8 @@ const MusicRecommend = () => {
           <Tab key="new" title="新歌速递" />
         </Tabs>
       </div>
-      {activeTab === "rank" ? (
-        <div>
+      <div ref={contentRef}>
+        <div style={{ display: activeTab === "rank" ? "block" : "none" }}>
           {initialLoading && list.length === 0 ? (
             <div className="flex h-[40vh] items-center justify-center">
               <Spinner size="lg" />
@@ -174,7 +174,6 @@ const MusicRecommend = () => {
             </div>
           ) : (
             <div
-              ref={wrapperRef}
               style={{
                 display: "grid",
                 gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
@@ -190,9 +189,10 @@ const MusicRecommend = () => {
             {loadingMore && <Spinner size="sm" />}
           </div>
         </div>
-      ) : (
-        <NewMusicTop />
-      )}
+        <div style={{ display: activeTab === "new" ? "block" : "none" }}>
+          <NewMusicTop columns={columns} />
+        </div>
+      </div>
     </ScrollContainer>
   );
 };

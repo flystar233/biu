@@ -1,21 +1,21 @@
 {
   "name": "biu",
-  "version": "1.17.0",
+  "version": "1.17.1",
   "private": true,
   "engines": {
     "node": "22.17.1"
   },
   "type": "module",
   "description": "music application based on bilibili api",
-  "author": "wood3n",
+  "author": "flystar233",
   "license": "PolyForm-Noncommercial-1.0.0",
-  "homepage": "https://github.com/wood3n/biu#readme",
+  "homepage": "https://github.com/flystar233/biu#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/wood3n/biu.git"
+    "url": "git+https://github.com/flystar233/biu.git"
   },
   "bugs": {
-    "url": "https://github.com/wood3n/biu/issues"
+    "url": "https://github.com/flystar233/biu/issues"
   },
   "keywords": [
     "music",

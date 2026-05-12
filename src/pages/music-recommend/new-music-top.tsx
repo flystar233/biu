@@ -1,7 +1,6 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 
 import { Card, Spinner, addToast } from "@heroui/react";
-import { useSize } from "ahooks";
 import log from "electron-log/renderer";
 
 import { getNewMusic } from "@/service/web-interface-new-music";
@@ -17,21 +16,9 @@ type UnifiedItem = MusicGridItemData & {
   playCount?: number;
 };
 
-const NewMusicTop = () => {
+const NewMusicTop = ({ columns }: { columns: number }) => {
   const [items, setItems] = useState<UnifiedItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const wrapperRef = useRef<HTMLDivElement>(null);
-  const wrapperSize = useSize(wrapperRef);
-  const containerWidth = wrapperSize?.width || 0;
-
-  const columns = useMemo(() => {
-    if (!containerWidth) return 2;
-    if (containerWidth >= 1536) return 6;
-    if (containerWidth >= 1280) return 5;
-    if (containerWidth >= 1024) return 4;
-    if (containerWidth >= 768) return 3;
-    return 2;
-  }, [containerWidth]);
 
   const handlePlay = React.useCallback((item: MusicGridItemData) => {
     const uniItem = item as UnifiedItem;
@@ -114,7 +101,6 @@ const NewMusicTop = () => {
 
   return (
     <div
-      ref={wrapperRef}
       style={{
         display: "grid",
         gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,

@@ -6,7 +6,7 @@ import { ELECTRON_OUT_DIRNAME, ELECTRON_ICON_BASE_PATH } from "../shared/path";
 
 export async function buildElectron() {
   await electronBuild({
-    publish: "onTag",
+    publish: "never",
     config: {
       appId: "com.biu.wood3n",
       productName: "Biu",
@@ -80,7 +80,7 @@ export async function buildElectron() {
       },
       publish: {
         provider: "github",
-        owner: "wood3n",
+        owner: "flystar233",
         repo: "biu",
         releaseType: null,
       },
